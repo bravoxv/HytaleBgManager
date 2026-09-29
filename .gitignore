@@ -1,0 +1,6 @@
+node_modules/
+*.zip
+*.bin
+Installer.cs
+compile_installer.js
+copy_fix.bat

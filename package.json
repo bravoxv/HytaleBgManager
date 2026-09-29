@@ -1,0 +1,30 @@
+{
+  "name": "hytale-bg-manager",
+  "version": "1.0.0",
+  "description": "Gestor visual nativo de escritorio para MainMenuBackgrounds.json de Hytale",
+  "main": "app.html",
+  "window": {
+    "title": "Hytale - Main Menu Background Editor",
+    "width": 1200,
+    "height": 850,
+    "min_width": 900,
+    "min_height": 650,
+    "position": "center",
+    "resizable": true,
+    "frame": true,
+    "icon": "icon.png"
+  },
+  "devDependencies": {
+    "iexpress": "^1.0.0",
+    "innosetup": "^6.4.1",
+    "nw": "^0.85.0",
+    "nwjs": "^1.4.4"
+  },
+  "dependencies": {
+    "chrome-launcher": "^1.2.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "multer": "^2.4.0",
+    "puppeteer-core": "^25.12.0"
+  }
+}

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hytale - Main Menu Background Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header class="titlebar">
+        <div class="titlebar-left">
+            <span class="app-icon">🎮</span>
+            <span class="app-title">Hytale – Main Menu Background Editor</span>
+        </div>
+
+        <div class="header-controls">
+            <!-- Selector de Versión -->
+            <div class="control-group">
+                <span class="control-icon">📁</span>
+                <label for="version-select" style="font-size:0.85rem; font-weight:600; margin-right:4px;"
+                    data-i18n="versionLabel">Versión:</label>
+                <select id="version-select" class="lang-select"></select>
+            </div>
+
+            <!-- Selector de Idioma -->
+            <div class="control-group">
+                <span class="control-icon">🌐</span>
+                <select id="lang-select" class="lang-select">
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                    <option value="pt">Português</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-container single-panel">
+        <section class="main-editor">
+            <div id="editor-form" class="editor-form">
+                <div class="editor-header">
+                    <h2 data-i18n="editingBackground">Editor de Fondo</h2>
+                    <div class="header-actions">
+                        <button id="btn-open-folder" class="btn btn-secondary" data-i18n="openTexturesFolder">
+                            📁 Abrir Carpeta Texturas
+                        </button>
+                        <button id="btn-save-all" class="btn btn-success" data-i18n="saveChanges">💾 Guardar
+                            Cambios</button>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <!-- Images -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 data-i18n="backgroundImagesTitle">🖼️ Imágenes del Fondo</h3>
+                            <label for="file-upload" class="btn btn-accent btn-sm" style="cursor:pointer;"
+                                data-i18n="importPng">
+                                ⬆️ Importar PNG
+                            </label>
+                            <input type="file" id="file-upload" accept=".png" style="display:none;">
+                        </div>
+                        <p class="help-text" data-i18n="pngHelpText">Solo se permiten archivos <code>.png</code>. Se
+                            copian automáticamente a <code>BackgroundImages</code> de la versión seleccionada.</p>
+
+                        <div class="form-group">
+                            <label for="img-name" data-i18n="mainImageLabel">Imagen Principal (Image):</label>
+                            <div class="input-with-btn">
+                                <input type="text" id="img-name" placeholder="Textures/BackgroundImages/MiFondo.png">
+                                <select id="select-img-preset" class="select-preset">
+                                    <option value="" data-i18n="selectFromFolder">-- Seleccionar --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="blurred-img-name" data-i18n="blurredImageLabel">Imagen Desenfocada
+                                (BlurredImage):</label>
+                            <div class="input-with-btn">
+                                <input type="text" id="blurred-img-name"
+                                    placeholder="Textures/BackgroundImages/MiFondoBlurred.png">
+                                <select id="select-blurred-preset" class="select-preset">
+                                    <option value="" data-i18n="selectFromFolder">-- Seleccionar --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VFX -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 data-i18n="vfxTitle">✨ Efectos de Partículas (VFX)</h3>
+                            <div class="vfx-header-actions">
+                                <a href="https://orbishytale.com/es/effects/" target="_blank"
+                                    class="btn btn-info btn-sm" data-i18n="vfxGuideLink">
+                                    🌐 Guía OrbisHytale
+                                </a>
+                                <button id="btn-apply-vfx" class="btn btn-success btn-sm" data-i18n="applyVfxChanges">✅
+                                    Aplicar Partículas</button>
+                                <button id="btn-add-vfx" class="btn btn-primary btn-sm" data-i18n="addParticle">+
+                                    Agregar Partícula</button>
+                            </div>
+                        </div>
+                        <p class="help-text" data-i18n="vfxHelpText">Añade efectos visuales 3D especificando nombre,
+                            posición y escala.</p>
+                        <div class="vfx-list" id="vfx-list"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="client.js"></script>
+</body>
+
+</html>
