@@ -10,7 +10,23 @@ const PORT = 4785;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Resolver la ruta correcta a la carpeta public tanto en ejecución Node como compilado con pkg
+const publicPath = fs.existsSync(path.join(__dirname, 'public'))
+    ? path.join(__dirname, 'public')
+    : path.join(process.cwd(), 'public');
+
+app.use(express.static(publicPath));
+
+// Fallback para servir index.html en la ruta raíz '/'
+app.get('/', (req, res) => {
+    const indexPath = path.join(publicPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(404).send('index.html no encontrado');
+    }
+});
 
 const APPDATA = process.env.APPDATA ||
     (process.platform === 'darwin' ? process.env.HOME + '/Library/Preferences' : process.env.HOME + '/.config');
@@ -51,7 +67,6 @@ app.get('/api/config', (req, res) => {
             const data = fs.readFileSync(jsonPath, 'utf8');
             res.json({ success: true, data: JSON.parse(data), version });
         } else {
-            // Return empty default structure if file does not exist yet for this version
             res.json({
                 success: true,
                 data: { Groups: [{ Backgrounds: [] }] },
