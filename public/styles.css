@@ -199,6 +199,27 @@ select:focus {
     width: 240px;
 }
 
+/* UI Switch Toggle */
+.switch input:checked+.slider {
+    background-color: var(--btn-green) !important;
+}
+
+.switch input:checked+.slider:before {
+    transform: translateX(24px);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+
 /* VFX List */
 .vfx-header-actions {
     display: flex;

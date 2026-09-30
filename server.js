@@ -11,14 +11,12 @@ const PORT = 4785;
 app.use(cors());
 app.use(express.json());
 
-// Resolver la ruta correcta a la carpeta public tanto en ejecución Node como compilado con pkg
 const publicPath = fs.existsSync(path.join(__dirname, 'public'))
     ? path.join(__dirname, 'public')
     : path.join(process.cwd(), 'public');
 
 app.use(express.static(publicPath));
 
-// Fallback para servir index.html en la ruta raíz '/'
 app.get('/', (req, res) => {
     const indexPath = path.join(publicPath, 'index.html');
     if (fs.existsSync(indexPath)) {
@@ -33,7 +31,6 @@ const APPDATA = process.env.APPDATA ||
 
 const INSTALL_BASE_DIR = path.join(APPDATA, 'Hytale', 'install');
 
-// Helper to get available versions (e.g. ['pre-release', 'release'])
 function getVersions() {
     if (!fs.existsSync(INSTALL_BASE_DIR)) return ['pre-release'];
     try {
@@ -46,17 +43,65 @@ function getVersions() {
     }
 }
 
-// Helper to get paths for a specific version
 function getPathsForVersion(ver) {
     const safeVer = ver || 'pre-release';
     const jsonPath = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
     const texturesDir = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
-    return { jsonPath, texturesDir };
+    const newsCarouselPath = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui');
+    return { jsonPath, texturesDir, newsCarouselPath };
 }
 
 // APIs
 app.get('/api/versions', (req, res) => {
     res.json({ success: true, versions: getVersions() });
+});
+
+// API de Noticias / UI Carousel Status
+app.get('/api/news-status', (req, res) => {
+    const version = req.query.version || 'pre-release';
+    const { newsCarouselPath } = getPathsForVersion(version);
+    try {
+        if (!fs.existsSync(newsCarouselPath)) {
+            return res.json({ success: true, visible: true, exists: false });
+        }
+        const content = fs.readFileSync(newsCarouselPath, 'utf8');
+        // Si contiene la propiedad Visible: false en Group #Carousel, las noticias están ocultas
+        const isHidden = /Group\s+#Carousel\s*\{[\s\S]*?Visible\s*:\s*false/i.test(content);
+        res.json({ success: true, visible: !isHidden, exists: true });
+    } catch (err) {
+        res.json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/news-status', (req, res) => {
+    const version = req.query.version || 'pre-release';
+    const { visible } = req.body; // true = visible, false = oculta (transparente/invisible)
+    const { newsCarouselPath } = getPathsForVersion(version);
+    try {
+        if (!fs.existsSync(newsCarouselPath)) {
+            return res.json({ success: false, error: 'El archivo NewsTilesCarousel.ui no existe en esta versión.' });
+        }
+        let content = fs.readFileSync(newsCarouselPath, 'utf8');
+
+        if (visible === false) {
+            // Ocultar e invisibilizar las noticias en el archivo .ui
+            if (/Group\s+#Carousel\s*\{[\s\S]*?Visible\s*:/i.test(content)) {
+                content = content.replace(/(Group\s+#Carousel\s*\{[\s\S]*?Visible\s*:\s*)(true|false)/i, '$1false');
+            } else {
+                content = content.replace(/(Group\s+#Carousel\s*\{)/i, '$1\n  Visible: false;');
+            }
+        } else {
+            // Mostrar de nuevo las noticias
+            if (/Group\s+#Carousel\s*\{[\s\S]*?Visible\s*:\s*false/i.test(content)) {
+                content = content.replace(/(Group\s+#Carousel\s*\{[\s\S]*?Visible\s*:\s*)false/i, '$1true');
+            }
+        }
+
+        fs.writeFileSync(newsCarouselPath, content, 'utf8');
+        res.json({ success: true, visible });
+    } catch (err) {
+        res.json({ success: false, error: err.message });
+    }
 });
 
 app.get('/api/config', (req, res) => {
@@ -112,7 +157,7 @@ app.post('/api/open-folder', (req, res) => {
     res.json({ success: true });
 });
 
-// Upload PNG image to textures folder for selected version
+// Upload PNG image
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const version = req.query.version || 'pre-release';
@@ -136,7 +181,6 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     res.json({ success: true, fileName: req.file.filename });
 });
 
-// Start server
 app.listen(PORT, () => {
     const appUrl = `http://localhost:${PORT}`;
     console.log(`Servidor iniciado: ${appUrl}`);

@@ -10,12 +10,15 @@ const translations = {
         pngHelpText: "Solo se permiten archivos .png. Se copian automáticamente a BackgroundImages de la versión seleccionada.",
         mainImageLabel: "Imagen Principal (Image):", blurredImageLabel: "Imagen Desenfocada (BlurredImage):",
         selectFromFolder: "-- Seleccionar --",
+        newsSectionTitle: "📰 Tarjetas de Noticias (NewsTilesCarousel)",
+        newsSectionHelp: "Oculta o muestra el panel de noticias transparente en el menú principal.",
+        newsStatusText: "Estado en configuración UI:", newsStatusVisible: "true (Visible)", newsStatusHidden: "false (Invisible / Oculto)",
         vfxTitle: "✨ Efectos de Partículas (VFX)", vfxGuideLink: "🌐 Guía OrbisHytale",
         applyVfxChanges: "✅ Aplicar Partículas", addParticle: "+ Agregar Partícula",
         vfxHelpText: "Añade efectos visuales 3D especificando nombre, posición y escala.",
         vfxNameLabel: "Nombre del Efecto (SystemId)", posXLabel: "X", posYLabel: "Y", posZLabel: "Z", scaleLabel: "Escala",
         noVfxYet: "No hay efectos aún. Haz clic en '+ Agregar Partícula'.",
-        toastSaved: "¡JSON guardado con éxito!", toastVfxApplied: "¡Partículas aplicadas!",
+        toastSaved: "¡Configuración guardada con éxito!", toastVfxApplied: "¡Partículas aplicadas!",
         toastUploading: "Subiendo imagen...", toastUploaded: "guardada en BackgroundImages", toastError: "Error",
         toastVersionLoaded: "Cargada versión: "
     },
@@ -26,12 +29,15 @@ const translations = {
         pngHelpText: "Only .png files allowed. Automatically copied to BackgroundImages for selected version.",
         mainImageLabel: "Main Image (Image):", blurredImageLabel: "Blurred Image (BlurredImage):",
         selectFromFolder: "-- Select --",
+        newsSectionTitle: "📰 News Carousel (NewsTilesCarousel)",
+        newsSectionHelp: "Hide or show the transparent news panel on the main menu.",
+        newsStatusText: "UI Config status:", newsStatusVisible: "true (Visible)", newsStatusHidden: "false (Invisible / Hidden)",
         vfxTitle: "✨ Particle Effects (VFX)", vfxGuideLink: "🌐 OrbisHytale Guide",
         applyVfxChanges: "✅ Apply Particles", addParticle: "+ Add Particle",
         vfxHelpText: "Add 3D visual effects specifying name, position and scale.",
         vfxNameLabel: "Effect Name (SystemId)", posXLabel: "X", posYLabel: "Y", posZLabel: "Z", scaleLabel: "Scale",
         noVfxYet: "No effects yet. Click '+ Add Particle'.",
-        toastSaved: "JSON saved successfully!", toastVfxApplied: "Particles applied!",
+        toastSaved: "Configuration saved successfully!", toastVfxApplied: "Particles applied!",
         toastUploading: "Uploading image...", toastUploaded: "saved into BackgroundImages", toastError: "Error",
         toastVersionLoaded: "Loaded version: "
     },
@@ -42,12 +48,15 @@ const translations = {
         pngHelpText: "Apenas arquivos .png. Copiados automaticamente para BackgroundImages da versão selecionada.",
         mainImageLabel: "Imagem Principal (Image):", blurredImageLabel: "Imagem Desfocada (BlurredImage):",
         selectFromFolder: "-- Selecionar --",
+        newsSectionTitle: "📰 Cartões de Notícias (NewsTilesCarousel)",
+        newsSectionHelp: "Ocular ou mostrar o painel transparente de notícias no menu principal.",
+        newsStatusText: "Estado da config UI:", newsStatusVisible: "true (Visível)", newsStatusHidden: "false (Invisível / Oculto)",
         vfxTitle: "✨ Efeitos de Partículas (VFX)", vfxGuideLink: "🌐 Guia OrbisHytale",
         applyVfxChanges: "✅ Aplicar Partículas", addParticle: "+ Adicionar Partícula",
         vfxHelpText: "Adicione efeitos 3D especificando nome, posição e escala.",
         vfxNameLabel: "Nome do Efeito (SystemId)", posXLabel: "X", posYLabel: "Y", posZLabel: "Z", scaleLabel: "Escala",
         noVfxYet: "Nenhum efeito ainda. Clique em '+ Adicionar Partícula'.",
-        toastSaved: "JSON salvo com sucesso!", toastVfxApplied: "Partículas aplicadas!",
+        toastSaved: "Configuração salva com sucesso!", toastVfxApplied: "Partículas aplicadas!",
         toastUploading: "Enviando imagem...", toastUploaded: "salvo em BackgroundImages", toastError: "Erro",
         toastVersionLoaded: "Versão carregada: "
     }
@@ -68,15 +77,20 @@ const btnApplyVfx = document.getElementById('btn-apply-vfx');
 const vfxListEl = document.getElementById('vfx-list');
 const toastEl = document.getElementById('toast');
 
+const chkNewsVisible = document.getElementById('chk-news-visible');
+const newsStatusLabel = document.getElementById('news-status-label');
+
 async function init() {
     await loadVersions();
     await loadData();
+    await loadNewsStatus();
     await refreshTexturePresets();
     updateLanguageUI();
 
     versionSelect.addEventListener('change', async e => {
         currentVersion = e.target.value;
         await loadData();
+        await loadNewsStatus();
         await refreshTexturePresets();
         showToast(translations[currentLang].toastVersionLoaded + currentVersion);
     });
@@ -91,6 +105,8 @@ async function init() {
     btnOpenFolder.addEventListener('click', () => fetch(`/api/open-folder?version=${encodeURIComponent(currentVersion)}`, { method: 'POST' }));
     btnAddVfx.addEventListener('click', addVfxEffect);
     btnApplyVfx.addEventListener('click', applyVfxChanges);
+
+    chkNewsVisible.addEventListener('change', toggleNewsVisibility);
 
     fileUpload.addEventListener('change', handleFileUpload);
 
@@ -128,6 +144,40 @@ function updateLanguageUI() {
         if ((el.tagName === 'INPUT') && el.placeholder !== undefined) el.placeholder = t[key];
         else el.textContent = t[key];
     });
+    updateNewsLabel(chkNewsVisible.checked);
+}
+
+async function loadNewsStatus() {
+    const res = await fetch(`/api/news-status?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
+    if (res.success) {
+        chkNewsVisible.checked = res.visible;
+        updateNewsLabel(res.visible);
+    }
+}
+
+function updateNewsLabel(isVisible) {
+    const t = translations[currentLang];
+    if (isVisible) {
+        newsStatusLabel.textContent = t.newsStatusVisible;
+        newsStatusLabel.style.color = '#10b981';
+    } else {
+        newsStatusLabel.textContent = t.newsStatusHidden;
+        newsStatusLabel.style.color = '#ef4444';
+    }
+}
+
+async function toggleNewsVisibility() {
+    const isVisible = chkNewsVisible.checked;
+    updateNewsLabel(isVisible);
+    const res = await fetch(`/api/news-status?version=${encodeURIComponent(currentVersion)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visible: isVisible })
+    }).then(r => r.json());
+
+    if (!res.success) {
+        showToast('Error: ' + res.error, true);
+    }
 }
 
 async function loadData() {

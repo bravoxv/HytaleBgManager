@@ -54,7 +54,7 @@
                 </div>
 
                 <div class="form-grid">
-                    <!-- Images -->
+                    <!-- Images & Interface Settings -->
                     <div class="card">
                         <div class="card-header">
                             <h3 data-i18n="backgroundImagesTitle">🖼️ Imágenes del Fondo</h3>
@@ -86,6 +86,31 @@
                                 <select id="select-blurred-preset" class="select-preset">
                                     <option value="" data-i18n="selectFromFolder">-- Seleccionar --</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- Configuración de Noticias del Menú Principal -->
+                        <div class="news-config-box"
+                            style="margin-top: 20px; padding: 14px; background: rgba(30, 41, 59, 0.6); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <h4 style="margin:0 0 4px 0; font-size:0.95rem; color:#f8fafc;"
+                                        data-i18n="newsSectionTitle">📰 Tarjetas de Noticias (NewsTilesCarousel)</h4>
+                                    <p class="help-text" style="margin:0;" data-i18n="newsSectionHelp">Oculta o muestra
+                                        el panel de noticias transparente en la pantalla principal.</p>
+                                </div>
+                                <label class="switch"
+                                    style="position:relative; display:inline-block; width:50px; height:26px;">
+                                    <input type="checkbox" id="chk-news-visible" checked
+                                        style="opacity:0; width:0; height:0;">
+                                    <span class="slider"
+                                        style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#334155; transition:.3s; border-radius:26px;"></span>
+                                </label>
+                            </div>
+                            <div style="margin-top: 10px; font-size: 0.85rem; color: #94a3b8;">
+                                <span data-i18n="newsStatusText">Estado en configuración UI:</span>
+                                <strong id="news-status-label" style="color: #10b981; margin-left: 5px;">true
+                                    (Visible)</strong>
                             </div>
                         </div>
                     </div>
