@@ -20,7 +20,12 @@ const translations = {
         noVfxYet: "No hay efectos aún. Haz clic en '+ Agregar Partícula'.",
         toastSaved: "¡Configuración guardada con éxito!", toastVfxApplied: "¡Partículas aplicadas y guardadas!",
         toastUploading: "Subiendo imagen...", toastUploaded: "guardada en BackgroundImages", toastError: "Error",
-        toastVersionLoaded: "Cargada versión: "
+        toastVersionLoaded: "Cargada versión: ",
+        avatarSectionTitle: "🧍 Personaje del Menú (AvatarPreview)",
+        avatarSectionHelp: "Oculta o mueve el personaje en el menú principal (HomePage.ui).",
+        avatarPosTop: "Posición Vertical (Top):", avatarPosLeft: "Posición Horizontal (Left):",
+        avatarApply: "✅ Aplicar Posición del Personaje", avatarStatusText: "Estado:",
+        avatarStatusVisible: "Visible", avatarStatusHidden: "Oculto (Width/Height: 0)"
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -39,7 +44,12 @@ const translations = {
         noVfxYet: "No effects yet. Click '+ Add Particle'.",
         toastSaved: "Configuration saved successfully!", toastVfxApplied: "Particles applied and saved!",
         toastUploading: "Uploading image...", toastUploaded: "saved into BackgroundImages", toastError: "Error",
-        toastVersionLoaded: "Loaded version: "
+        toastVersionLoaded: "Loaded version: ",
+        avatarSectionTitle: "🧍 Menu Character (AvatarPreview)",
+        avatarSectionHelp: "Hide or move the character on the main menu (HomePage.ui).",
+        avatarPosTop: "Vertical Position (Top):", avatarPosLeft: "Horizontal Position (Left):",
+        avatarApply: "✅ Apply Character Position", avatarStatusText: "Status:",
+        avatarStatusVisible: "Visible", avatarStatusHidden: "Hidden (Width/Height: 0)"
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -58,7 +68,12 @@ const translations = {
         noVfxYet: "Nenhum efeito ainda. Clique em '+ Adicionar Partícula'.",
         toastSaved: "Configuração salva com sucesso!", toastVfxApplied: "Partículas aplicadas e salvas!",
         toastUploading: "Enviando imagem...", toastUploaded: "salvo em BackgroundImages", toastError: "Erro",
-        toastVersionLoaded: "Versão carregada: "
+        toastVersionLoaded: "Versão carregada: ",
+        avatarSectionTitle: "🧍 Personagem do Menu (AvatarPreview)",
+        avatarSectionHelp: "Ocultar ou mover o personagem no menu principal (HomePage.ui).",
+        avatarPosTop: "Posição Vertical (Top):", avatarPosLeft: "Posição Horizontal (Left):",
+        avatarApply: "✅ Aplicar Posição do Personagem", avatarStatusText: "Estado:",
+        avatarStatusVisible: "Visível", avatarStatusHidden: "Oculto (Width/Height: 0)"
     }
 };
 
@@ -80,6 +95,14 @@ const toastEl = document.getElementById('toast');
 const chkNewsVisible = document.getElementById('chk-news-visible');
 const newsStatusLabel = document.getElementById('news-status-label');
 
+const chkAvatarVisible = document.getElementById('chk-avatar-visible');
+const avatarStatusLabel = document.getElementById('avatar-status-label');
+const avatarTopSlider = document.getElementById('avatar-top');
+const avatarTopNum = document.getElementById('avatar-top-num');
+const avatarLeftSlider = document.getElementById('avatar-left');
+const avatarLeftNum = document.getElementById('avatar-left-num');
+const btnApplyAvatar = document.getElementById('btn-apply-avatar');
+
 window.addEventListener('beforeunload', () => {
     navigator.sendBeacon('/api/shutdown');
 });
@@ -88,6 +111,7 @@ async function init() {
     await loadVersions();
     await loadData();
     await loadNewsStatus();
+    await loadAvatarStatus();
     await refreshTexturePresets();
     updateLanguageUI();
 
@@ -95,6 +119,7 @@ async function init() {
         currentVersion = e.target.value;
         await loadData();
         await loadNewsStatus();
+        await loadAvatarStatus();
         await refreshTexturePresets();
         showToast(translations[currentLang].toastVersionLoaded + currentVersion);
     });
@@ -111,6 +136,15 @@ async function init() {
     btnApplyVfx.addEventListener('click', applyVfxChanges);
 
     chkNewsVisible.addEventListener('change', toggleNewsVisibility);
+    chkAvatarVisible.addEventListener('change', () => updateAvatarPositionControlsVisibility());
+    btnApplyAvatar.addEventListener('click', applyAvatarChanges);
+
+    // Sincronizar slider <-> número para Top
+    avatarTopSlider.addEventListener('input', () => { avatarTopNum.value = avatarTopSlider.value; });
+    avatarTopNum.addEventListener('input', () => { avatarTopSlider.value = avatarTopNum.value; });
+    // Sincronizar slider <-> número para Left
+    avatarLeftSlider.addEventListener('input', () => { avatarLeftNum.value = avatarLeftSlider.value; });
+    avatarLeftNum.addEventListener('input', () => { avatarLeftSlider.value = avatarLeftNum.value; });
 
     fileUpload.addEventListener('change', handleFileUpload);
 
@@ -180,6 +214,59 @@ async function toggleNewsVisibility() {
     }).then(r => r.json());
 
     if (!res.success) {
+        showToast('Error: ' + res.error, true);
+    }
+}
+
+async function loadAvatarStatus() {
+    const res = await fetch(`/api/avatar-status?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
+    if (res.success) {
+        chkAvatarVisible.checked = res.visible;
+        avatarTopSlider.value = res.top;
+        avatarTopNum.value = res.top;
+        avatarLeftSlider.value = res.left;
+        avatarLeftNum.value = res.left;
+        updateAvatarLabel(res.visible, res.top, res.left);
+        updateAvatarPositionControlsVisibility();
+    }
+}
+
+function updateAvatarLabel(isVisible, top, left) {
+    const t = translations[currentLang];
+    if (isVisible) {
+        avatarStatusLabel.textContent = `${t.avatarStatusVisible} (Top: ${top}, Left: ${left})`;
+        avatarStatusLabel.style.color = '#10b981';
+    } else {
+        avatarStatusLabel.textContent = t.avatarStatusHidden;
+        avatarStatusLabel.style.color = '#ef4444';
+    }
+}
+
+function updateAvatarPositionControlsVisibility() {
+    const controls = document.getElementById('avatar-position-controls');
+    const btn = document.getElementById('btn-apply-avatar');
+    if (!chkAvatarVisible.checked) {
+        controls.style.opacity = '0.4';
+        controls.style.pointerEvents = 'none';
+    } else {
+        controls.style.opacity = '1';
+        controls.style.pointerEvents = 'auto';
+    }
+}
+
+async function applyAvatarChanges() {
+    const isVisible = chkAvatarVisible.checked;
+    const top = parseInt(avatarTopNum.value) || 320;
+    const left = parseInt(avatarLeftNum.value) || 0;
+    const res = await fetch(`/api/avatar-status?version=${encodeURIComponent(currentVersion)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visible: isVisible, top, left, width: 420, height: 640 })
+    }).then(r => r.json());
+    if (res.success) {
+        updateAvatarLabel(isVisible, top, left);
+        showToast(translations[currentLang].toastSaved);
+    } else {
         showToast('Error: ' + res.error, true);
     }
 }

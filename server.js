@@ -56,7 +56,8 @@ function getPathsForVersion(ver) {
   const jsonPath = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
   const texturesDir = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
   const newsCarouselPath = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui');
-  return { jsonPath, texturesDir, newsCarouselPath };
+  const homePagePath = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui');
+  return { jsonPath, texturesDir, newsCarouselPath, homePagePath };
 }
 
 // Plantilla por defecto (Original / Default)
@@ -262,6 +263,66 @@ Group #Carousel {
   }
 }
 `;
+
+// ── Avatar / HomePage API ──────────────────────────────────────────────────
+// GET: devuelve la config actual del #AvatarPreview (visible, top, left, width, height)
+app.get('/api/avatar-status', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  const { homePagePath } = getPathsForVersion(version);
+  try {
+    if (!fs.existsSync(homePagePath)) {
+      return res.json({ success: true, visible: true, top: 320, left: 0, width: 420, height: 640 });
+    }
+    const content = fs.readFileSync(homePagePath, 'utf8');
+    // Leer valores actuales del anchor del AvatarPreview
+    const anchorMatch = content.match(/PlayerPreviewComponent\s+#AvatarPreview\s*\{\s*Anchor:\s*\(([^)]+)\)/);
+    let top = 320, left = 0, width = 420, height = 640;
+    if (anchorMatch) {
+      const anchorStr = anchorMatch[1];
+      const topM = anchorStr.match(/Top:\s*(-?\d+)/);
+      const leftM = anchorStr.match(/Left:\s*(-?\d+)/);
+      const widthM = anchorStr.match(/Width:\s*(\d+)/);
+      const heightM = anchorStr.match(/Height:\s*(\d+)/);
+      if (topM) top = parseInt(topM[1]);
+      if (leftM) left = parseInt(leftM[1]);
+      if (widthM) width = parseInt(widthM[1]);
+      if (heightM) height = parseInt(heightM[1]);
+    }
+    // Está oculto si Width o Height es 0
+    const visible = width > 0 && height > 0;
+    res.json({ success: true, visible, top, left, width, height });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// POST: modifica posición o visibilidad del #AvatarPreview en HomePage.ui
+app.post('/api/avatar-status', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  const { homePagePath } = getPathsForVersion(version);
+  const { visible, top, left, width, height } = req.body;
+  try {
+    if (!fs.existsSync(homePagePath)) {
+      return res.json({ success: false, error: 'HomePage.ui no encontrado' });
+    }
+    let content = fs.readFileSync(homePagePath, 'utf8');
+    const newTop = top ?? 320;
+    const newLeft = left ?? 0;
+    const newWidth = visible === false ? 0 : (width ?? 420);
+    const newHeight = visible === false ? 0 : (height ?? 640);
+    // Reemplazar el Anchor del AvatarPreview
+    const leftPart = newLeft !== 0 ? `, Left: ${newLeft}` : ``;
+    const newAnchor = `Anchor: (Top: ${newTop}${leftPart}, Width: ${newWidth}, Height: ${newHeight})`;
+    content = content.replace(
+      /PlayerPreviewComponent\s+#AvatarPreview\s*\{\s*Anchor:\s*\([^)]+\)/,
+      `PlayerPreviewComponent #AvatarPreview {\n  ${newAnchor}`
+    );
+    fs.writeFileSync(homePagePath, content, 'utf8');
+    res.json({ success: true, visible: visible !== false, top: newTop, left: newLeft, width: newWidth, height: newHeight });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
 
 // APIs
 app.get('/api/versions', (req, res) => {
