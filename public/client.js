@@ -18,7 +18,7 @@ const translations = {
         vfxHelpText: "Añade efectos visuales 3D especificando nombre, posición y escala.",
         vfxNameLabel: "Nombre del Efecto (SystemId)", posXLabel: "X", posYLabel: "Y", posZLabel: "Z", scaleLabel: "Escala",
         noVfxYet: "No hay efectos aún. Haz clic en '+ Agregar Partícula'.",
-        toastSaved: "¡Configuración guardada con éxito!", toastVfxApplied: "¡Partículas aplicadas!",
+        toastSaved: "¡Configuración guardada con éxito!", toastVfxApplied: "¡Partículas aplicadas y guardadas!",
         toastUploading: "Subiendo imagen...", toastUploaded: "guardada en BackgroundImages", toastError: "Error",
         toastVersionLoaded: "Cargada versión: "
     },
@@ -37,7 +37,7 @@ const translations = {
         vfxHelpText: "Add 3D visual effects specifying name, position and scale.",
         vfxNameLabel: "Effect Name (SystemId)", posXLabel: "X", posYLabel: "Y", posZLabel: "Z", scaleLabel: "Scale",
         noVfxYet: "No effects yet. Click '+ Add Particle'.",
-        toastSaved: "Configuration saved successfully!", toastVfxApplied: "Particles applied!",
+        toastSaved: "Configuration saved successfully!", toastVfxApplied: "Particles applied and saved!",
         toastUploading: "Uploading image...", toastUploaded: "saved into BackgroundImages", toastError: "Error",
         toastVersionLoaded: "Loaded version: "
     },
@@ -56,7 +56,7 @@ const translations = {
         vfxHelpText: "Adicione efeitos 3D especificando nome, posição e escala.",
         vfxNameLabel: "Nome do Efeito (SystemId)", posXLabel: "X", posYLabel: "Y", posZLabel: "Z", scaleLabel: "Escala",
         noVfxYet: "Nenhum efeito ainda. Clique em '+ Adicionar Partícula'.",
-        toastSaved: "Configuração salva com sucesso!", toastVfxApplied: "Partículas aplicadas!",
+        toastSaved: "Configuração salva com sucesso!", toastVfxApplied: "Partículas aplicadas e salvas!",
         toastUploading: "Enviando imagem...", toastUploaded: "salvo em BackgroundImages", toastError: "Erro",
         toastVersionLoaded: "Versão carregada: "
     }
@@ -80,7 +80,6 @@ const toastEl = document.getElementById('toast');
 const chkNewsVisible = document.getElementById('chk-news-visible');
 const newsStatusLabel = document.getElementById('news-status-label');
 
-// Event listener para cerrar el proceso backend HytaleBgServer.exe al cerrar la ventana
 window.addEventListener('beforeunload', () => {
     navigator.sendBeacon('/api/shutdown');
 });
@@ -296,7 +295,8 @@ function addVfxEffect() {
     renderVfxList(bg.Vfx);
 }
 
-function applyVfxChanges() {
+async function applyVfxChanges() {
+    await saveConfig();
     showToast(translations[currentLang].toastVfxApplied);
 }
 
