@@ -138,7 +138,7 @@ async function init() {
     btnApplyVfx.addEventListener('click', applyVfxChanges);
 
     chkNewsVisible.addEventListener('change', toggleNewsVisibility);
-    chkAvatarVisible.addEventListener('change', () => updateAvatarPositionControlsVisibility());
+    chkAvatarVisible.addEventListener('change', applyAvatarChanges);
     btnApplyAvatar.addEventListener('click', applyAvatarChanges);
     if (btnResetAvatar) btnResetAvatar.addEventListener('click', resetAvatarDefault);
 
@@ -247,11 +247,7 @@ function updateAvatarLabel(isVisible, top, left) {
 
 function updateAvatarPositionControlsVisibility() {
     const controls = document.getElementById('avatar-position-controls');
-    const btn = document.getElementById('btn-apply-avatar');
-    if (!chkAvatarVisible.checked) {
-        controls.style.opacity = '0.4';
-        controls.style.pointerEvents = 'none';
-    } else {
+    if (controls) {
         controls.style.opacity = '1';
         controls.style.pointerEvents = 'auto';
     }
