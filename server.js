@@ -271,26 +271,24 @@ app.get('/api/avatar-status', (req, res) => {
   const { homePagePath } = getPathsForVersion(version);
   try {
     if (!fs.existsSync(homePagePath)) {
-      return res.json({ success: true, visible: true, top: 320, left: 0, width: 420, height: 640 });
+      return res.json({ success: true, visible: true, top: 320, left: 0 });
     }
     const content = fs.readFileSync(homePagePath, 'utf8');
-    // Leer valores actuales del anchor del AvatarPreview
-    const anchorMatch = content.match(/PlayerPreviewComponent\s+#AvatarPreview\s*\{\s*Anchor:\s*\(([^)]+)\)/);
-    let top = 320, left = 0, width = 420, height = 640;
-    if (anchorMatch) {
-      const anchorStr = anchorMatch[1];
-      const topM = anchorStr.match(/Top:\s*(-?\d+)/);
-      const leftM = anchorStr.match(/Left:\s*(-?\d+)/);
-      const widthM = anchorStr.match(/Width:\s*(\d+)/);
-      const heightM = anchorStr.match(/Height:\s*(\d+)/);
-      if (topM) top = parseInt(topM[1]);
-      if (leftM) left = parseInt(leftM[1]);
-      if (widthM) width = parseInt(widthM[1]);
-      if (heightM) height = parseInt(heightM[1]);
+    const blockMatch = content.match(/PlayerPreviewComponent\s+#AvatarPreview\s*\{([\s\S]*?)\}/);
+    let top = 320, left = 0, visible = true;
+    if (blockMatch) {
+      const blockStr = blockMatch[1];
+      if (/Visible:\s*false/i.test(blockStr)) {
+        visible = false;
+      }
+      const topM = blockStr.match(/Top:\s*(-?\d+)/);
+      const leftM = blockStr.match(/Left:\s*(-?\d+)/);
+      const widthM = blockStr.match(/Width:\s*(\d+)/);
+      if (topM && visible) top = parseInt(topM[1]);
+      if (leftM && visible) left = parseInt(leftM[1]);
+      if (widthM && parseInt(widthM[1]) === 0) visible = false;
     }
-    // Está oculto si Width o Height es 0
-    const visible = width > 0 && height > 0;
-    res.json({ success: true, visible, top, left, width, height });
+    res.json({ success: true, visible, top, left });
   } catch (err) {
     res.json({ success: false, error: err.message });
   }
@@ -300,25 +298,34 @@ app.get('/api/avatar-status', (req, res) => {
 app.post('/api/avatar-status', (req, res) => {
   const version = req.query.version || 'pre-release';
   const { homePagePath } = getPathsForVersion(version);
-  const { visible, top, left, width, height } = req.body;
+  const { visible, top, left } = req.body;
   try {
     if (!fs.existsSync(homePagePath)) {
       return res.json({ success: false, error: 'HomePage.ui no encontrado' });
     }
     let content = fs.readFileSync(homePagePath, 'utf8');
+    const isVisible = visible !== false;
     const newTop = top ?? 320;
     const newLeft = left ?? 0;
-    const newWidth = visible === false ? 0 : (width ?? 420);
-    const newHeight = visible === false ? 0 : (height ?? 640);
-    // Reemplazar el Anchor del AvatarPreview
-    const leftPart = newLeft !== 0 ? `, Left: ${newLeft}` : ``;
-    const newAnchor = `Anchor: (Top: ${newTop}${leftPart}, Width: ${newWidth}, Height: ${newHeight})`;
-    content = content.replace(
-      /PlayerPreviewComponent\s+#AvatarPreview\s*\{\s*Anchor:\s*\([^)]+\)/,
-      `PlayerPreviewComponent #AvatarPreview {\n  ${newAnchor}`
-    );
+
+    let newBlock = '';
+    if (!isVisible) {
+      newBlock = `PlayerPreviewComponent #AvatarPreview {\n  Visible: false;\n  Anchor: (Top: 0, Left: -9999, Width: 0, Height: 0);\n}`;
+    } else {
+      const leftStr = newLeft !== 0 ? `Left: ${newLeft}, ` : '';
+      newBlock = `PlayerPreviewComponent #AvatarPreview {\n  Visible: true;\n  Anchor: (${leftStr}Top: ${newTop}, Width: 420, Height: 640);\n}`;
+    }
+
+    // Reemplazar o insertar el bloque AvatarPreview
+    const regex = /PlayerPreviewComponent\s+#AvatarPreview\s*\{[\s\S]*?\}/;
+    if (regex.test(content)) {
+      content = content.replace(regex, newBlock);
+    } else {
+      content += `\n\n${newBlock}\n`;
+    }
+
     fs.writeFileSync(homePagePath, content, 'utf8');
-    res.json({ success: true, visible: visible !== false, top: newTop, left: newLeft, width: newWidth, height: newHeight });
+    res.json({ success: true, visible: isVisible, top: newTop, left: newLeft });
   } catch (err) {
     res.json({ success: false, error: err.message });
   }

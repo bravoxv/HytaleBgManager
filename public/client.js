@@ -24,8 +24,9 @@ const translations = {
         avatarSectionTitle: "🧍 Personaje del Menú (AvatarPreview)",
         avatarSectionHelp: "Oculta o mueve el personaje en el menú principal (HomePage.ui).",
         avatarPosTop: "Posición Vertical (Top):", avatarPosLeft: "Posición Horizontal (Left):",
-        avatarApply: "✅ Aplicar Posición del Personaje", avatarStatusText: "Estado:",
-        avatarStatusVisible: "Visible", avatarStatusHidden: "Oculto (Width/Height: 0)"
+        avatarApply: "✅ Aplicar Posición del Personaje", avatarReset: "↺ Por Defecto", avatarStatusText: "Estado:",
+        avatarStatusVisible: "Visible", avatarStatusHidden: "Oculto (Visible: false)",
+        toastAvatarApplied: "¡Configuración del personaje guardada y aplicada!"
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -102,6 +103,7 @@ const avatarTopNum = document.getElementById('avatar-top-num');
 const avatarLeftSlider = document.getElementById('avatar-left');
 const avatarLeftNum = document.getElementById('avatar-left-num');
 const btnApplyAvatar = document.getElementById('btn-apply-avatar');
+const btnResetAvatar = document.getElementById('btn-reset-avatar');
 
 window.addEventListener('beforeunload', () => {
     navigator.sendBeacon('/api/shutdown');
@@ -138,6 +140,7 @@ async function init() {
     chkNewsVisible.addEventListener('change', toggleNewsVisibility);
     chkAvatarVisible.addEventListener('change', () => updateAvatarPositionControlsVisibility());
     btnApplyAvatar.addEventListener('click', applyAvatarChanges);
+    if (btnResetAvatar) btnResetAvatar.addEventListener('click', resetAvatarDefault);
 
     // Sincronizar slider <-> número para Top
     avatarTopSlider.addEventListener('input', () => { avatarTopNum.value = avatarTopSlider.value; });
@@ -261,14 +264,24 @@ async function applyAvatarChanges() {
     const res = await fetch(`/api/avatar-status?version=${encodeURIComponent(currentVersion)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visible: isVisible, top, left, width: 420, height: 640 })
+        body: JSON.stringify({ visible: isVisible, top, left })
     }).then(r => r.json());
     if (res.success) {
         updateAvatarLabel(isVisible, top, left);
-        showToast(translations[currentLang].toastSaved);
+        showToast(translations[currentLang].toastAvatarApplied || translations[currentLang].toastSaved);
     } else {
         showToast('Error: ' + res.error, true);
     }
+}
+
+async function resetAvatarDefault() {
+    chkAvatarVisible.checked = true;
+    avatarTopSlider.value = 320;
+    avatarTopNum.value = 320;
+    avatarLeftSlider.value = 0;
+    avatarLeftNum.value = 0;
+    updateAvatarPositionControlsVisibility();
+    await applyAvatarChanges();
 }
 
 async function loadData() {
