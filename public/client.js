@@ -45,7 +45,7 @@ const translations = {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
         editingBackground: "Editor de Fundo do Menu", saveChanges: "💾 Salvar",
         backgroundImagesTitle: "🖼️ Imagens de Fundo", importPng: "⬆️ Importar PNG",
-        pngHelpText: "Apenas arquivos .png. Copiados automaticamente para BackgroundImages da versão selecionada.",
+        pngHelpText: "Apenas arquivos .png. Copiados automaticamente para BackgroundImages da versão seleccionada.",
         mainImageLabel: "Imagem Principal (Image):", blurredImageLabel: "Imagem Desfocada (BlurredImage):",
         selectFromFolder: "-- Selecionar --",
         newsSectionTitle: "📰 Cartões de Notícias (NewsTilesCarousel)",
@@ -79,6 +79,11 @@ const toastEl = document.getElementById('toast');
 
 const chkNewsVisible = document.getElementById('chk-news-visible');
 const newsStatusLabel = document.getElementById('news-status-label');
+
+// Event listener para cerrar el proceso backend HytaleBgServer.exe al cerrar la ventana
+window.addEventListener('beforeunload', () => {
+    navigator.sendBeacon('/api/shutdown');
+});
 
 async function init() {
     await loadVersions();
