@@ -436,10 +436,28 @@ async function saveConfig() {
 }
 
 function showToast(msg, isError = false) {
-    toastEl.textContent = msg;
-    toastEl.className = `toast${isError ? ' error' : ''}`;
     clearTimeout(toastEl._timeout);
-    toastEl._timeout = setTimeout(() => { toastEl.className = 'toast hidden'; }, 3500);
+    clearTimeout(toastEl._hideTimeout);
+
+    // Forzar reinicio de animación quitando el elemento del DOM brevemente
+    toastEl.className = 'toast hidden';
+    toastEl.textContent = msg;
+
+    // Pequeño delay para que el navegador note el cambio y relanzar animación
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            toastEl.className = `toast${isError ? ' error' : ''}`;
+
+            // Iniciar fade-out después de 4 segundos
+            toastEl._timeout = setTimeout(() => {
+                toastEl.classList.add('hiding');
+                // Ocultar del todo tras la animación de salida (0.3s)
+                toastEl._hideTimeout = setTimeout(() => {
+                    toastEl.className = 'toast hidden';
+                }, 320);
+            }, 4000);
+        });
+    });
 }
 
 init();
