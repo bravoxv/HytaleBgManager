@@ -31,6 +31,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
 }
 
 /* Header */
@@ -339,53 +340,54 @@ select:focus {
     display: none !important;
 }
 
-/* Toast notification */
-@keyframes toastSlideIn {
+/* Alert Banner Notification */
+@keyframes alertSlideDown {
     from {
         opacity: 0;
-        transform: translateY(30px) scale(0.95);
+        transform: translate(-50%, -30px);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translate(-50%, 0);
     }
 }
 
-@keyframes toastFadeOut {
+@keyframes alertSlideUp {
     from {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translate(-50%, 0);
     }
 
     to {
         opacity: 0;
-        transform: translateY(10px) scale(0.95);
+        transform: translate(-50%, -30px);
     }
 }
 
 .toast {
     position: fixed;
-    bottom: 28px;
-    right: 28px;
-    padding: 14px 24px;
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-    border-radius: 10px;
+    top: 65px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 28px;
+    background: #10b981;
+    color: #ffffff;
+    border-radius: 30px;
     font-weight: 700;
     font-size: 14px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
-    z-index: 9999;
-    animation: toastSlideIn 0.3s ease forwards;
-    max-width: 380px;
-    line-height: 1.4;
+    letter-spacing: 0.3px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(255, 255, 255, 0.2);
+    z-index: 999999;
+    animation: alertSlideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     pointer-events: none;
+    white-space: nowrap;
 }
 
 .toast.error {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: #ef4444;
 }
 
 .toast.hiding {
-    animation: toastFadeOut 0.3s ease forwards;
+    animation: alertSlideUp 0.3s ease forwards;
 }
