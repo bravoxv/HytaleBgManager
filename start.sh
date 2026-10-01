@@ -24,10 +24,10 @@ if [ "$WSL_VERSION" -eq 1 ]; then
     echo "  (Electron no soporta WSL 1 sin display grafico)"
     echo ""
 
-    # Instalar dependencias si faltan
+    # Instalar dependencias si faltan (sin Electron — no se necesita en WSL 1)
     if [ ! -d "node_modules" ]; then
-        echo "  Instalando dependencias, espera..."
-        npm install
+        echo "  Instalando dependencias del servidor (sin Electron)..."
+        npm install --omit=dev
     fi
 
     # Lanzar el servidor Express en segundo plano
