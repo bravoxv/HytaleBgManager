@@ -4,21 +4,26 @@ cd /d "%~dp0"
 echo Directorio: %CD%
 echo.
 
+:: Asegurar que las rutas basicas del sistema (System32) y Node.js esten en el PATH
+set "PATH=%SystemRoot%\System32;%SystemRoot%;%SystemRoot%\System32\Wbem;%SystemRoot%\System32\WindowsPowerShell\v1.0\;%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%LocalAppData%\Programs\node;%AppData%\npm;%PATH%"
+
 :: Comprobar si Node.js / npm esta disponible
-where npm >nul 2>nul
-if %ERRORLEVEL% neq 0 (
-    :: Intentar rutas comunes de instalacion de Node.js por si no esta en el PATH
-    if exist "%ProgramFiles%\nodejs\npm.cmd" (
-        set "PATH=%ProgramFiles%\nodejs;%PATH%"
-    ) else if exist "%ProgramFiles(x86)%\nodejs\npm.cmd" (
-        set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
-    ) else if exist "%LocalAppData%\Programs\node\npm.cmd" (
-        set "PATH=%LocalAppData%\Programs\node;%PATH%"
-    )
+set "NODE_FOUND=0"
+if exist "%ProgramFiles%\nodejs\npm.cmd" set "NODE_FOUND=1"
+if exist "%ProgramFiles(x86)%\nodejs\npm.cmd" set "NODE_FOUND=1"
+if exist "%LocalAppData%\Programs\node\npm.cmd" set "NODE_FOUND=1"
+
+if "%NODE_FOUND%"=="0" (
+    where npm >nul 2>nul
+    if %ERRORLEVEL% equ 0 set "NODE_FOUND=1"
 )
 
-where npm >nul 2>nul
-if %ERRORLEVEL% neq 0 (
+if "%NODE_FOUND%"=="0" (
+    where node >nul 2>nul
+    if %ERRORLEVEL% equ 0 set "NODE_FOUND=1"
+)
+
+if "%NODE_FOUND%"=="0" (
     echo.
     echo ========================================================
     echo AVISO: Node.js no esta instalado en este equipo.
