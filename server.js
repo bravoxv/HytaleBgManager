@@ -183,34 +183,47 @@ function getVersions() {
 
 function getPathsForVersion(ver) {
   const safeVer = ver || 'pre-release';
-
-  // 1. Primero: usar los paths exactos guardados cuando el usuario escaneó su carpeta
   const cfg = loadConfig();
-  if (cfg.resolvedPaths) {
+
+  // 1. Si el usuario escaneó y encontró archivos → usar los paths exactos guardados
+  if (cfg.resolvedPaths && cfg.resolvedPaths.jsonPath) {
     const rp = cfg.resolvedPaths;
     return {
-      jsonPath:        rp.jsonPath        || '',
-      texturesDir:     rp.texturesDir     || '',
-      newsCarouselPath: rp.newsCarouselPath || '',
-      homePagePath:    rp.homePagePath    || '',
+      jsonPath:         rp.jsonPath         || '',
+      texturesDir:      rp.texturesDir      || '',
+      newsCarouselPath: rp.newsCarouselPath  || '',
+      homePagePath:     rp.homePagePath      || '',
     };
   }
 
-  // 2. Segundo: ruta estándar del launcher de Hytale
-  const installBase = getHytaleInstallBase();
-  let jsonPath        = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
-  let texturesDir     = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
-  let newsCarouselPath = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui');
-  let homePagePath    = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui');
+  // 2. Si el usuario eligió una carpeta custom (aunque no tenga archivos),
+  //    usar ESA carpeta como base y NO caer al AppData del sistema.
+  //    Así el usuario controla siempre qué carpeta está activa.
+  if (cfg.customHytalePath) {
+    const base = cfg.customHytalePath;
+    return {
+      jsonPath:         path.join(base, 'MainMenuBackgrounds.json'),
+      texturesDir:      path.join(base, 'BackgroundImages'),
+      newsCarouselPath: path.join(base, 'NewsTilesCarousel.ui'),
+      homePagePath:     path.join(base, 'HomePage.ui'),
+    };
+  }
 
-  // 3. Tercero: búsqueda recursiva si no existen en ruta estándar
+  // 3. Sin carpeta custom: usar la ruta estándar del launcher de Hytale
+  const installBase = getHytaleInstallBase();
+  let jsonPath         = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
+  let texturesDir      = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
+  let newsCarouselPath = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui');
+  let homePagePath     = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui');
+
+  // Búsqueda recursiva si no existen en ruta estándar
   if (!fs.existsSync(jsonPath) && fs.existsSync(installBase)) {
     const found = findHytaleFilesRecursively(installBase);
     if (found && found.jsonPath) {
-      if (found.jsonPath)        jsonPath = found.jsonPath;
-      if (found.texturesDir)     texturesDir = found.texturesDir;
+      if (found.jsonPath)         jsonPath = found.jsonPath;
+      if (found.texturesDir)      texturesDir = found.texturesDir;
       if (found.newsCarouselPath) newsCarouselPath = found.newsCarouselPath;
-      if (found.homePagePath)    homePagePath = found.homePagePath;
+      if (found.homePagePath)     homePagePath = found.homePagePath;
     }
   }
 
@@ -587,9 +600,11 @@ app.post('/api/open-folder', (req, res) => {
 
 // Obtener la ruta actual configurada de Hytale y estado de archivos
 app.get('/api/hytale-path', (req, res) => {
-  const currentPath = getHytaleInstallBase();
   const cfg = loadConfig();
-  const found = findHytaleFilesRecursively(currentPath);
+  const currentPath = cfg.customHytalePath || getHytaleInstallBase();
+  const found = cfg.resolvedPaths && cfg.resolvedPaths.jsonPath
+    ? cfg.resolvedPaths
+    : findHytaleFilesRecursively(currentPath);
 
   res.json({
     success: true,
@@ -603,6 +618,12 @@ app.get('/api/hytale-path', (req, res) => {
     filesDetected: !!(found && found.jsonPath),
     details: found
   });
+});
+
+// Limpiar la ruta guardada y volver al estado sin configuración
+app.delete('/api/hytale-path', (req, res) => {
+  saveConfig({ customHytalePath: null, resolvedPaths: null });
+  res.json({ success: true, message: 'Ruta limpiada correctamente' });
 });
 
 // Endpoint de diagnóstico: muestra qué encontró y qué no

@@ -600,13 +600,30 @@ if (linuxFolderInput) {
 if (linuxDirPicker) {
     linuxDirPicker.addEventListener('change', (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            // El navegador no siempre provee ruta completa por seguridad, pero provee el nombre o relativo
             const first = e.target.files[0];
             const rel = first.webkitRelativePath || '';
             const rootDirName = rel.split('/')[0];
             showToast(`Carpeta seleccionada: ${rootDirName}. Buscando...`);
-            // Si el input tenía un path base, o si el usuario puede confirmar la ruta
             performLinuxPathSearch();
+        }
+    });
+}
+
+// Botón limpiar ruta: borra la configuración guardada y resetea los badges
+const btnClearPath = document.getElementById('btn-clear-path');
+if (btnClearPath) {
+    btnClearPath.addEventListener('click', async () => {
+        try {
+            await fetch('/api/hytale-path', { method: 'DELETE' });
+            if (linuxFolderInput) linuxFolderInput.value = '';
+            updateFileBadges(false, {});
+            if (linuxStatusSummary) {
+                linuxStatusSummary.textContent = '⚠️ Sin carpeta configurada.';
+                linuxStatusSummary.style.color = '#f59e0b';
+            }
+            showToast('Ruta limpiada. Selecciona una nueva carpeta.');
+        } catch(e) {
+            showToast('Error al limpiar la ruta', true);
         }
     });
 }
@@ -621,5 +638,6 @@ async function reloadAllData() {
 
 checkLinuxHytaleStatus();
 init();
+
 
 
