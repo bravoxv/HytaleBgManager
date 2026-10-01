@@ -1,24 +1,32 @@
 @echo off
 :: Hytale BG Manager — Lanzador Windows
 cd /d "%~dp0"
+echo Directorio: %CD%
+echo.
 
 :: Instalar dependencias la primera vez
 if not exist node_modules (
-    echo Instalando dependencias, espera un momento...
+    echo Instalando dependencias, espera...
     npm install
-    echo.
 )
 
-:: Crear acceso directo en el Escritorio apuntando al electron.exe directamente
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$d=[Environment]::GetFolderPath('Desktop');" ^
-  "$s=(New-Object -ComObject WScript.Shell).CreateShortcut($d + '\Hytale BG Manager.lnk');" ^
-  "$s.TargetPath='%~dp0node_modules\electron\dist\electron.exe';" ^
-  "$s.Arguments='.';" ^
-  "$s.WorkingDirectory='%~dp0';" ^
-  "$s.Description='Hytale BG Manager';" ^
-  "$s.IconLocation='%~dp0app.ico';" ^
-  "$s.Save()"
+:: Verificar electron
+if not exist "node_modules\electron\dist\electron.exe" (
+    echo ERROR: electron.exe no encontrado en node_modules\electron\dist\
+    echo Intentando reinstalar...
+    npm install electron --save-dev
+)
 
-:: Lanzar electron directamente
-"%~dp0node_modules\electron\dist\electron.exe" .
+echo Lanzando Hytale BG Manager...
+echo.
+
+"node_modules\electron\dist\electron.exe" . > launch_log.txt 2>&1
+set EXIT=%ERRORLEVEL%
+
+echo.
+echo === LOG DE INICIO ===
+type launch_log.txt
+echo.
+echo Codigo de salida: %EXIT%
+echo.
+pause

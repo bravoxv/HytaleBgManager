@@ -87,7 +87,7 @@ function saveConfig(data) {
 }
 
 // Búsqueda recursiva para encontrar los archivos requeridos de Hytale
-function findHytaleFilesRecursively(startDir, maxDepth = 6) {
+function findHytaleFilesRecursively(startDir, maxDepth = 12) {
   if (!fs.existsSync(startDir)) return null;
 
   const results = {
@@ -183,21 +183,34 @@ function getVersions() {
 
 function getPathsForVersion(ver) {
   const safeVer = ver || 'pre-release';
+
+  // 1. Primero: usar los paths exactos guardados cuando el usuario escaneó su carpeta
+  const cfg = loadConfig();
+  if (cfg.resolvedPaths) {
+    const rp = cfg.resolvedPaths;
+    return {
+      jsonPath:        rp.jsonPath        || '',
+      texturesDir:     rp.texturesDir     || '',
+      newsCarouselPath: rp.newsCarouselPath || '',
+      homePagePath:    rp.homePagePath    || '',
+    };
+  }
+
+  // 2. Segundo: ruta estándar del launcher de Hytale
   const installBase = getHytaleInstallBase();
-
-  let jsonPath = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
-  let texturesDir = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
+  let jsonPath        = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
+  let texturesDir     = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
   let newsCarouselPath = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui');
-  let homePagePath = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui');
+  let homePagePath    = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui');
 
-  // Si no existen en la ruta estándar, realizar búsqueda recursiva a partir de installBase
+  // 3. Tercero: búsqueda recursiva si no existen en ruta estándar
   if (!fs.existsSync(jsonPath) && fs.existsSync(installBase)) {
-    const recursiveResults = findHytaleFilesRecursively(installBase);
-    if (recursiveResults && recursiveResults.jsonPath) {
-      if (recursiveResults.jsonPath) jsonPath = recursiveResults.jsonPath;
-      if (recursiveResults.texturesDir) texturesDir = recursiveResults.texturesDir;
-      if (recursiveResults.newsCarouselPath) newsCarouselPath = recursiveResults.newsCarouselPath;
-      if (recursiveResults.homePagePath) homePagePath = recursiveResults.homePagePath;
+    const found = findHytaleFilesRecursively(installBase);
+    if (found && found.jsonPath) {
+      if (found.jsonPath)        jsonPath = found.jsonPath;
+      if (found.texturesDir)     texturesDir = found.texturesDir;
+      if (found.newsCarouselPath) newsCarouselPath = found.newsCarouselPath;
+      if (found.homePagePath)    homePagePath = found.homePagePath;
     }
   }
 
@@ -592,6 +605,23 @@ app.get('/api/hytale-path', (req, res) => {
   });
 });
 
+// Endpoint de diagnóstico: muestra qué encontró y qué no
+app.get('/api/debug-path', (req, res) => {
+  const targetPath = req.query.path || getHytaleInstallBase();
+  const exists = fs.existsSync(targetPath);
+  let entries = [];
+  if (exists) {
+    try { entries = fs.readdirSync(targetPath).slice(0, 30); } catch(e) {}
+  }
+  const found = exists ? findHytaleFilesRecursively(targetPath) : null;
+  res.json({
+    targetPath, exists,
+    topLevelEntries: entries,
+    searchResult: found,
+    filesDetected: !!(found && found.jsonPath)
+  });
+});
+
 // Guardar nueva ruta de Hytale y buscar archivos
 app.post('/api/hytale-path', (req, res) => {
   let targetPath = (req.body.path || '').trim();
@@ -608,9 +638,35 @@ app.post('/api/hytale-path', (req, res) => {
     return res.json({ success: false, error: 'La carpeta especificada no existe en el sistema' });
   }
 
-  // Buscar archivos dentro de la ruta
-  const found = findHytaleFilesRecursively(targetPath);
-  saveConfig({ customHytalePath: targetPath });
+  // Buscar archivos dentro de la ruta (búsqueda recursiva profunda)
+  let found = findHytaleFilesRecursively(targetPath);
+
+  // Si no encontró en la raíz, intentar buscar en cada subcarpeta de primer nivel
+  if (!found || !found.jsonPath) {
+    try {
+      const subDirs = fs.readdirSync(targetPath, { withFileTypes: true })
+        .filter(e => e.isDirectory())
+        .map(e => path.join(targetPath, e.name));
+      for (const sub of subDirs) {
+        const subFound = findHytaleFilesRecursively(sub);
+        if (subFound && subFound.jsonPath) { found = subFound; break; }
+      }
+    } catch(e) {}
+  }
+
+  // Guardar ruta base y, si encontró archivos, los paths exactos para todos los endpoints
+  const configToSave = { customHytalePath: targetPath };
+  if (found && found.jsonPath) {
+    configToSave.resolvedPaths = {
+      jsonPath:         found.jsonPath,
+      texturesDir:      found.texturesDir || '',
+      newsCarouselPath: found.newsCarouselPath || '',
+      homePagePath:     found.homePagePath || '',
+    };
+  } else {
+    configToSave.resolvedPaths = null;
+  }
+  saveConfig(configToSave);
 
   res.json({
     success: true,
