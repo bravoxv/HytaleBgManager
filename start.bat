@@ -97,12 +97,9 @@ if not exist "node_modules\electron\dist\electron.exe" (
 echo Lanzando Hytale BG Manager...
 echo.
 
-"node_modules\electron\dist\electron.exe" . > launch_log.txt 2>&1
+"node_modules\electron\dist\electron.exe" .
 set EXIT=%ERRORLEVEL%
 
-echo.
-echo === LOG DE INICIO ===
-type launch_log.txt
 echo.
 echo Codigo de salida: %EXIT%
 echo.
