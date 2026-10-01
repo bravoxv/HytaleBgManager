@@ -188,16 +188,22 @@ async function init() {
 
 async function loadVersions() {
     const res = await fetch('/api/versions').then(r => r.json());
+    const prevVersion = currentVersion || (versionSelect ? versionSelect.value : null);
     versionSelect.innerHTML = '';
+    let availableVersions = ['pre-release', 'release'];
     if (res.success && res.versions.length) {
-        res.versions.forEach(v => {
-            versionSelect.appendChild(new Option(v, v));
-        });
-        currentVersion = res.versions[0];
+        availableVersions = res.versions;
+    }
+    availableVersions.forEach(v => {
+        versionSelect.appendChild(new Option(v, v));
+    });
+    // Si la versión previamente seleccionada aún está disponible, mantenerla
+    if (prevVersion && availableVersions.includes(prevVersion)) {
+        currentVersion = prevVersion;
+        versionSelect.value = prevVersion;
     } else {
-        versionSelect.appendChild(new Option('pre-release', 'pre-release'));
-        versionSelect.appendChild(new Option('release', 'release'));
-        currentVersion = 'pre-release';
+        currentVersion = availableVersions[0];
+        versionSelect.value = availableVersions[0];
     }
 }
 
