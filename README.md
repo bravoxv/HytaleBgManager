@@ -1,12 +1,22 @@
 # 🎮 Hytale Main Menu Background Editor
 
-Herramienta multiplataforma (Windows, Linux y macOS) para personalizar el fondo del menú principal de Hytale, controlar el personaje (**AvatarPreview**), la tarjeta de noticias (**NewsTilesCarousel**) y efectos visuales de partículas (VFX).
+Herramienta multiplataforma (**Windows**, **Linux** y **macOS**) para personalizar el fondo del menú principal de Hytale, controlar el personaje (**AvatarPreview**), la tarjeta de noticias (**NewsTilesCarousel**) y efectos visuales de partículas (VFX).
 
 ---
 
 ## 🚀 Cómo ejecutar (100% Código Fuente Abierto - 0% Falsos Positivos)
 
-Para garantizar la máxima seguridad y compatibilidad total con **Linux**, **macOS** y **Windows**, la aplicación se ejecuta directamente desde el código fuente sin empaquetadores sospechosos ni ejecutables `.exe` sin firmar.
+Para garantizar la máxima seguridad y compatibilidad total con **Linux**, **macOS** y **Windows**, la aplicación se ejecuta directamente desde el código fuente sin empaquetadores sospechosos ni binarios `.exe` sin firmar.
+
+### 🪟 En Windows:
+
+1. **Requisito**: Tener instalado [Node.js](https://nodejs.org/).
+2. Haz doble clic en **`start.bat`**.
+   - Se abrirá la aplicación en tu navegador web.
+   - **La ventana de la consola (CMD) se cerrará inmediatamente** y el programa quedará corriendo en segundo plano.
+   - **Se creará un acceso directo en tu Escritorio** (`Hytale BG Manager.lnk`) para que puedas abrirlo fácilmente en el futuro.
+
+---
 
 ### 🐧 En Linux / 🍎 macOS:
 
@@ -16,22 +26,13 @@ Para garantizar la máxima seguridad y compatibilidad total con **Linux**, **mac
    - **Fedora**: `sudo dnf install nodejs npm`
 
 2. **Ejecutar**:
-   Abre una terminal en la carpeta del proyecto y ejecuta:
+   Abre una terminal en la carpeta del proyecto y ejecuta por única vez:
    ```bash
    chmod +x start.sh
    ./start.sh
    ```
-   *Se abrirá automáticamente la interfaz web en tu navegador predeterminado (`http://127.0.0.1:4785`).*
-
----
-
-### 🪟 En Windows:
-
-1. **Requisito**: Tener instalado [Node.js](https://nodejs.org/).
-2. Haz doble clic en `start.bat` o ejecuta en la consola:
-   ```cmd
-   start.bat
-   ```
+   - **La consola se liberará de inmediato** (la aplicación corre en segundo plano con `nohup`).
+   - **Se generará un acceso directo `.desktop` en tu Escritorio** (`Hytale BG Manager`) para que puedas iniciarlo con un doble clic.
 
 ---
 
@@ -39,7 +40,7 @@ Para garantizar la máxima seguridad y compatibilidad total con **Linux**, **mac
 
 - **100% Transparente**: Todo el código fuente es visible en JavaScript plano (`server.js`, `client.js`).
 - **Aislado en Localhost**: El servidor escucha exclusivamente en `127.0.0.1:4785` para evitar cualquier acceso remoto.
-- **Sin Instaladores de Terceros**: Sin ejecutables comprimidos o empaquetados que disparen falsos positivos en VirusTotal.
+- **Sin falsos positivos**: Cero binarios de terceros empaquetados.
 
 ---
 
