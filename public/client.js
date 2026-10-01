@@ -134,6 +134,7 @@ async function init() {
         await loadNewsStatus();
         await loadAvatarStatus();
         await refreshTexturePresets();
+        await checkLinuxHytaleStatus();
         
         if (dataRes && dataRes.fileExists === false) {
             if (currentVersion === 'release') {
@@ -527,22 +528,22 @@ function updateFileBadges(detected, details = {}) {
         }
     }
 
-    const hasJson = !!details.jsonPath;
-    const hasTextures = !!details.texturesDir;
-    const hasNews = !!details.newsCarouselPath;
-    const hasHome = !!details.homePagePath;
+    const hasJson = !!(details.jsonPath && (details.jsonPathExists !== undefined ? details.jsonPathExists : (typeof details.jsonPath === 'string' && !details.jsonPath.includes('undefined'))));
+    const hasTextures = !!(details.texturesDir && (details.texturesDirExists !== undefined ? details.texturesDirExists : true));
+    const hasNews = !!(details.newsCarouselPath && (details.newsCarouselPathExists !== undefined ? details.newsCarouselPathExists : true));
+    const hasHome = !!(details.homePagePath && (details.homePagePathExists !== undefined ? details.homePagePathExists : true));
 
-    setBadge(badgeJson, 'MainMenuBackgrounds.json', hasJson);
-    setBadge(badgeTextures, 'Carpeta BackgroundImages', hasTextures);
-    setBadge(badgeNews, 'NewsTilesCarousel.ui', hasNews);
-    setBadge(badgeHomepage, 'HomePage.ui', hasHome);
+    setBadge(badgeJson, 'MainMenuBackgrounds.json', hasJson && detected);
+    setBadge(badgeTextures, 'Carpeta BackgroundImages', hasTextures && detected);
+    setBadge(badgeNews, 'NewsTilesCarousel.ui', hasNews && detected);
+    setBadge(badgeHomepage, 'HomePage.ui', hasHome && detected);
 
     if (linuxStatusSummary) {
-        if (detected || hasJson) {
+        if (detected && hasJson) {
             linuxStatusSummary.textContent = '✅ ¡Archivos necesarios encontrados!';
             linuxStatusSummary.style.color = '#10b981';
         } else {
-            linuxStatusSummary.textContent = '⚠️ Archivos de Hytale no detectados en esta ruta.';
+            linuxStatusSummary.textContent = '⚠️ Archivos de Hytale no detectados en esta versión o ruta.';
             linuxStatusSummary.style.color = '#f59e0b';
         }
     }
@@ -551,7 +552,7 @@ function updateFileBadges(detected, details = {}) {
 async function checkLinuxHytaleStatus() {
     if (!linuxFolderInput) return;
     try {
-        const res = await fetch('/api/hytale-path').then(r => r.json());
+        const res = await fetch(`/api/hytale-path?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
         if (res.success) {
             linuxFolderInput.value = res.customPath || res.currentPath || '';
             updateFileBadges(res.filesDetected, res.details || {});
@@ -585,21 +586,21 @@ async function performLinuxPathSearch(pathValue) {
     }
 
     try {
-        const res = await fetch('/api/hytale-path', {
+        const res = await fetch(`/api/hytale-path?version=${encodeURIComponent(currentVersion)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: p })
+            body: JSON.stringify({ path: p, version: currentVersion })
         }).then(r => r.json());
 
         if (res.success) {
             if (linuxFolderInput) linuxFolderInput.value = res.path;
-            updateFileBadges(res.filesDetected, res.details || {});
+            await reloadAllData();
+            await checkLinuxHytaleStatus();
             if (res.filesDetected) {
                 showToast('¡Archivos de Hytale localizados con éxito!');
             } else {
-                showToast('Ruta guardada, pero faltan algunos archivos de Hytale', true);
+                showToast('Ruta guardada, pero faltan algunos archivos en esta versión', true);
             }
-            await reloadAllData();
         } else {
             if (linuxStatusSummary) {
                 linuxStatusSummary.textContent = `❌ ${res.error}`;

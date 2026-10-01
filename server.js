@@ -195,16 +195,14 @@ function getPathsForVersion(ver) {
   // 1. Si no hay carpeta custom o estamos buscando según versión seleccionada en installBase:
   const baseDir = cfg.customHytalePath || getHytaleInstallBase();
 
-  // Candidatos comunes de estructura de Hytale para la versión solicitada:
-  // a) installBase/<version>/package/game/latest/Client/...
-  // b) baseDir/Client/... (si el usuario eligió directamente la carpeta del juego)
-  // c) baseDir/<version>/...
+  // Candidatos de estructura para la versión solicitada (deben contener el nombre de la versión):
   const versionFolderCandidates = [
     path.join(baseDir, safeVer, 'package', 'game', 'latest'),
     path.join(baseDir, safeVer),
+    path.join(baseDir, 'install', safeVer, 'package', 'game', 'latest'),
+    path.join(baseDir, 'install', safeVer),
     path.join(getHytaleInstallBase(), safeVer, 'package', 'game', 'latest'),
-    path.join(getHytaleInstallBase(), safeVer),
-    baseDir
+    path.join(getHytaleInstallBase(), safeVer)
   ];
 
   for (const cand of versionFolderCandidates) {
@@ -218,8 +216,8 @@ function getPathsForVersion(ver) {
           homePagePath: path.join(cand, 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui'),
         };
       }
-      // Búsqueda recursiva dentro de la carpeta de la versión
-      const foundInCand = findHytaleFilesRecursively(cand, 8);
+      // Búsqueda recursiva dentro de la carpeta exclusiva de esa versión
+      const foundInCand = findHytaleFilesRecursively(cand, 6);
       if (foundInCand && foundInCand.jsonPath) {
         return {
           jsonPath: foundInCand.jsonPath,
@@ -626,23 +624,32 @@ app.post('/api/open-folder', (req, res) => {
 
 // Obtener la ruta actual configurada de Hytale y estado de archivos
 app.get('/api/hytale-path', (req, res) => {
+  const version = req.query.version || 'pre-release';
   const cfg = loadConfig();
   const currentPath = cfg.customHytalePath || getHytaleInstallBase();
-  const found = cfg.resolvedPaths && cfg.resolvedPaths.jsonPath
-    ? cfg.resolvedPaths
-    : findHytaleFilesRecursively(currentPath);
+  const paths = getPathsForVersion(version);
+  const jsonExists = !!(paths.jsonPath && fs.existsSync(paths.jsonPath));
+  const texturesExists = !!(paths.texturesDir && fs.existsSync(paths.texturesDir));
+  const newsExists = !!(paths.newsCarouselPath && fs.existsSync(paths.newsCarouselPath));
+  const homeExists = !!(paths.homePagePath && fs.existsSync(paths.homePagePath));
 
   res.json({
     success: true,
     currentPath,
     customPath: cfg.customHytalePath || null,
+    version,
     platform: process.platform,
     isLinux: process.platform === 'linux',
     isMac: process.platform === 'darwin',
     isWindows: process.platform === 'win32',
     exists: fs.existsSync(currentPath),
-    filesDetected: !!(found && found.jsonPath),
-    details: found
+    filesDetected: jsonExists,
+    details: {
+      jsonPath: jsonExists ? paths.jsonPath : null,
+      texturesDir: texturesExists ? paths.texturesDir : null,
+      newsCarouselPath: newsExists ? paths.newsCarouselPath : null,
+      homePagePath: homeExists ? paths.homePagePath : null,
+    }
   });
 });
 
@@ -701,25 +708,28 @@ app.post('/api/hytale-path', (req, res) => {
     } catch(e) {}
   }
 
-  // Guardar ruta base y, si encontró archivos, los paths exactos para todos los endpoints
-  const configToSave = { customHytalePath: targetPath };
-  if (found && found.jsonPath) {
-    configToSave.resolvedPaths = {
-      jsonPath:         found.jsonPath,
-      texturesDir:      found.texturesDir || '',
-      newsCarouselPath: found.newsCarouselPath || '',
-      homePagePath:     found.homePagePath || '',
-    };
-  } else {
-    configToSave.resolvedPaths = null;
-  }
+  // Guardar ruta base configurada
+  const configToSave = { customHytalePath: targetPath, resolvedPaths: null };
   saveConfig(configToSave);
+
+  const reqVersion = req.query.version || req.body.version || 'pre-release';
+  const verPaths = getPathsForVersion(reqVersion);
+  const jsonExists = !!(verPaths.jsonPath && fs.existsSync(verPaths.jsonPath));
+  const texturesExists = !!(verPaths.texturesDir && fs.existsSync(verPaths.texturesDir));
+  const newsExists = !!(verPaths.newsCarouselPath && fs.existsSync(verPaths.newsCarouselPath));
+  const homeExists = !!(verPaths.homePagePath && fs.existsSync(verPaths.homePagePath));
 
   res.json({
     success: true,
     path: targetPath,
-    filesDetected: !!(found && found.jsonPath),
-    details: found || {},
+    version: reqVersion,
+    filesDetected: jsonExists,
+    details: {
+      jsonPath: jsonExists ? verPaths.jsonPath : null,
+      texturesDir: texturesExists ? verPaths.texturesDir : null,
+      newsCarouselPath: newsExists ? verPaths.newsCarouselPath : null,
+      homePagePath: homeExists ? verPaths.homePagePath : null,
+    },
     versions: getVersions()
   });
 });
