@@ -102,7 +102,12 @@ if not exist "node_modules\electron\dist\electron.exe" (
 echo Lanzando Hytale BG Manager...
 echo.
 
-"node_modules\electron\dist\electron.exe" .
+call npx electron .
+if %ERRORLEVEL% neq 0 (
+    if exist "node_modules\electron\dist\electron.exe" (
+        "node_modules\electron\dist\electron.exe" .
+    )
+)
 set EXIT=%ERRORLEVEL%
 
 echo.
