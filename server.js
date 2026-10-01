@@ -171,12 +171,16 @@ function getHytaleInstallBase() {
 function getVersions() {
   const installBase = getHytaleInstallBase();
   const defaultVersions = ['pre-release', 'release'];
+  const ignoredNames = new Set(['.keys', 'data', 'install', 'webview2', 'logs', 'cache', 'temp', 'tmp']);
+
   if (!fs.existsSync(installBase)) return defaultVersions;
   try {
     const dirs = fs.readdirSync(installBase, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory())
-      .map(dirent => dirent.name);
-    // Asegurar que al menos pre-release y release estén presentes para alternar fácilmente
+      .map(dirent => dirent.name)
+      .filter(name => !name.startsWith('.') && !ignoredNames.has(name.toLowerCase()));
+
+    // Asegurar que al menos pre-release y release estén presentes
     const combined = Array.from(new Set([...dirs, ...defaultVersions]));
     return combined.length > 0 ? combined : defaultVersions;
   } catch (e) {
