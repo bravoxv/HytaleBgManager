@@ -130,11 +130,24 @@ async function init() {
 
     versionSelect.addEventListener('change', async e => {
         currentVersion = e.target.value;
-        await loadData();
+        const dataRes = await loadData();
         await loadNewsStatus();
         await loadAvatarStatus();
         await refreshTexturePresets();
-        showToast(translations[currentLang].toastVersionLoaded + currentVersion);
+        
+        if (dataRes && dataRes.fileExists === false) {
+            if (currentVersion === 'release') {
+                showToast('❌ Archivos no encontrados en la versión "release". Fíjate si aparecen en "pre-release".', true);
+                if (linuxStatusSummary) {
+                    linuxStatusSummary.textContent = '❌ Sin archivos en "release". Prueba seleccionando "pre-release".';
+                    linuxStatusSummary.style.color = '#ef4444';
+                }
+            } else {
+                showToast(`⚠️ No se encontraron archivos para la versión "${currentVersion}".`, true);
+            }
+        } else {
+            showToast(translations[currentLang].toastVersionLoaded + currentVersion);
+        }
     });
 
     langSelect.addEventListener('change', e => {
@@ -292,21 +305,31 @@ async function resetAvatarDefault() {
 }
 
 async function loadData() {
-    const res = await fetch(`/api/config?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
-    if (res.success) {
-        currentConfig = res.data;
-        if (!currentConfig.Groups) currentConfig.Groups = [{ Backgrounds: [] }];
-        if (!currentConfig.Groups.length) currentConfig.Groups.push({ Backgrounds: [] });
-        if (!currentConfig.Groups[0].Backgrounds.length) {
-            currentConfig.Groups[0].Backgrounds.push({
-                Image: "Textures/BackgroundImages/banner.png",
-                BlurredImage: "Textures/BackgroundImages/bannerBlurred.png",
-                Vfx: []
-            });
+    try {
+        const res = await fetch(`/api/config?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
+        if (res.success) {
+            currentConfig = res.data;
+            if (!currentConfig.Groups) currentConfig.Groups = [{ Backgrounds: [] }];
+            if (!currentConfig.Groups.length) currentConfig.Groups.push({ Backgrounds: [] });
+            if (!currentConfig.Groups[0].Backgrounds.length) {
+                currentConfig.Groups[0].Backgrounds.push({
+                    Image: "Textures/BackgroundImages/banner.png",
+                    BlurredImage: "Textures/BackgroundImages/bannerBlurred.png",
+                    Vfx: []
+                });
+            }
+            renderForm();
+            if (res.paths) {
+                updateFileBadges(res.fileExists, res.paths);
+            }
+            return res;
+        } else {
+            showToast('Error: ' + res.error, true);
+            return res;
         }
-        renderForm();
-    } else {
-        showToast('Error: ' + res.error, true);
+    } catch(err) {
+        showToast('Error de conexión al cargar datos', true);
+        return { success: false, fileExists: false };
     }
 }
 

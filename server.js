@@ -170,14 +170,17 @@ function getHytaleInstallBase() {
 
 function getVersions() {
   const installBase = getHytaleInstallBase();
-  if (!fs.existsSync(installBase)) return ['pre-release'];
+  const defaultVersions = ['pre-release', 'release'];
+  if (!fs.existsSync(installBase)) return defaultVersions;
   try {
     const dirs = fs.readdirSync(installBase, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory())
       .map(dirent => dirent.name);
-    return dirs.length > 0 ? dirs : ['pre-release'];
+    // Asegurar que al menos pre-release y release estén presentes para alternar fácilmente
+    const combined = Array.from(new Set([...dirs, ...defaultVersions]));
+    return combined.length > 0 ? combined : defaultVersions;
   } catch (e) {
-    return ['pre-release'];
+    return defaultVersions;
   }
 }
 
@@ -185,8 +188,47 @@ function getPathsForVersion(ver) {
   const safeVer = ver || 'pre-release';
   const cfg = loadConfig();
 
-  // 1. Si el usuario escaneó y encontró archivos → usar los paths exactos guardados
-  if (cfg.resolvedPaths && cfg.resolvedPaths.jsonPath) {
+  // 1. Si no hay carpeta custom o estamos buscando según versión seleccionada en installBase:
+  const baseDir = cfg.customHytalePath || getHytaleInstallBase();
+
+  // Candidatos comunes de estructura de Hytale para la versión solicitada:
+  // a) installBase/<version>/package/game/latest/Client/...
+  // b) baseDir/Client/... (si el usuario eligió directamente la carpeta del juego)
+  // c) baseDir/<version>/...
+  const versionFolderCandidates = [
+    path.join(baseDir, safeVer, 'package', 'game', 'latest'),
+    path.join(baseDir, safeVer),
+    path.join(getHytaleInstallBase(), safeVer, 'package', 'game', 'latest'),
+    path.join(getHytaleInstallBase(), safeVer),
+    baseDir
+  ];
+
+  for (const cand of versionFolderCandidates) {
+    if (fs.existsSync(cand)) {
+      const standardJson = path.join(cand, 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
+      if (fs.existsSync(standardJson)) {
+        return {
+          jsonPath: standardJson,
+          texturesDir: path.join(cand, 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages'),
+          newsCarouselPath: path.join(cand, 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui'),
+          homePagePath: path.join(cand, 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui'),
+        };
+      }
+      // Búsqueda recursiva dentro de la carpeta de la versión
+      const foundInCand = findHytaleFilesRecursively(cand, 8);
+      if (foundInCand && foundInCand.jsonPath) {
+        return {
+          jsonPath: foundInCand.jsonPath,
+          texturesDir: foundInCand.texturesDir || '',
+          newsCarouselPath: foundInCand.newsCarouselPath || '',
+          homePagePath: foundInCand.homePagePath || '',
+        };
+      }
+    }
+  }
+
+  // Si el usuario escaneó y guardó rutas directas
+  if (cfg.resolvedPaths && cfg.resolvedPaths.jsonPath && safeVer === 'pre-release') {
     const rp = cfg.resolvedPaths;
     return {
       jsonPath:         rp.jsonPath         || '',
@@ -196,38 +238,14 @@ function getPathsForVersion(ver) {
     };
   }
 
-  // 2. Si el usuario eligió una carpeta custom (aunque no tenga archivos),
-  //    usar ESA carpeta como base y NO caer al AppData del sistema.
-  //    Así el usuario controla siempre qué carpeta está activa.
-  if (cfg.customHytalePath) {
-    const base = cfg.customHytalePath;
-    return {
-      jsonPath:         path.join(base, 'MainMenuBackgrounds.json'),
-      texturesDir:      path.join(base, 'BackgroundImages'),
-      newsCarouselPath: path.join(base, 'NewsTilesCarousel.ui'),
-      homePagePath:     path.join(base, 'HomePage.ui'),
-    };
-  }
-
-  // 3. Sin carpeta custom: usar la ruta estándar del launcher de Hytale
+  // Fallback estándar si nada existe
   const installBase = getHytaleInstallBase();
-  let jsonPath         = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
-  let texturesDir      = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
-  let newsCarouselPath = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui');
-  let homePagePath     = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui');
-
-  // Búsqueda recursiva si no existen en ruta estándar
-  if (!fs.existsSync(jsonPath) && fs.existsSync(installBase)) {
-    const found = findHytaleFilesRecursively(installBase);
-    if (found && found.jsonPath) {
-      if (found.jsonPath)         jsonPath = found.jsonPath;
-      if (found.texturesDir)      texturesDir = found.texturesDir;
-      if (found.newsCarouselPath) newsCarouselPath = found.newsCarouselPath;
-      if (found.homePagePath)     homePagePath = found.homePagePath;
-    }
-  }
-
-  return { jsonPath, texturesDir, newsCarouselPath, homePagePath };
+  return {
+    jsonPath:         path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json'),
+    texturesDir:      path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages'),
+    newsCarouselPath: path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui'),
+    homePagePath:     path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui'),
+  };
 }
 
 // Plantilla por defecto (Original / Default)
@@ -542,19 +560,23 @@ app.get('/api/config', (req, res) => {
   const version = req.query.version || 'pre-release';
   const { jsonPath } = getPathsForVersion(version);
   try {
-    if (fs.existsSync(jsonPath)) {
-      const data = fs.readFileSync(jsonPath, 'utf8');
-      res.json({ success: true, data: JSON.parse(data), version });
+    const paths = getPathsForVersion(version);
+    const fileExists = fs.existsSync(paths.jsonPath);
+    if (fileExists) {
+      const data = fs.readFileSync(paths.jsonPath, 'utf8');
+      res.json({ success: true, data: JSON.parse(data), version, fileExists: true, paths });
     } else {
       res.json({
         success: true,
         data: { Groups: [{ Backgrounds: [] }] },
         version,
-        isNewFile: true
+        isNewFile: true,
+        fileExists: false,
+        paths
       });
     }
   } catch (err) {
-    res.json({ success: false, error: err.message });
+    res.json({ success: false, error: err.message, fileExists: false });
   }
 });
 
