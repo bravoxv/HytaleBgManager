@@ -39,12 +39,24 @@ app.get('/windows', (req, res) => {
   res.sendFile(path.join(publicPath, 'index.html'));
 });
 
-// Endpoint para cerrar el proceso del servidor limpiamente cuando se cierra la ventana del navegador
+let shutdownTimeout = null;
+
+// Endpoint para cerrar el proceso del servidor cuando se cierra la ventana del navegador
 app.post('/api/shutdown', (req, res) => {
-  res.json({ success: true, message: 'Cerrando HytaleBgServer...' });
-  setTimeout(() => {
+  res.json({ success: true, message: 'Programando cierre de HytaleBgServer...' });
+  if (shutdownTimeout) clearTimeout(shutdownTimeout);
+  shutdownTimeout = setTimeout(() => {
     process.exit(0);
-  }, 400);
+  }, 2500);
+});
+
+// Endpoint ping para cancelar el apagado si la pestaña fue recargada o abierta de nuevo
+app.get('/api/ping', (req, res) => {
+  if (shutdownTimeout) {
+    clearTimeout(shutdownTimeout);
+    shutdownTimeout = null;
+  }
+  res.json({ success: true, message: 'pong' });
 });
 
 const os = require('os');
@@ -656,9 +668,12 @@ app.listen(PORT, '127.0.0.1', () => {
 
   if (process.platform === 'win32') {
     const candidates = [
+      `"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe" --app=${appUrl} --window-size=1200,850`,
+      `"C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe" --app=${appUrl} --window-size=1200,850`,
+      `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --app=${appUrl} --window-size=1200,850`,
+      `"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" --app=${appUrl} --window-size=1200,850`,
       `"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" --app=${appUrl} --window-size=1200,850`,
       `"C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe" --app=${appUrl} --window-size=1200,850`,
-      `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --app=${appUrl} --window-size=1200,850`,
     ];
     let launched = false;
     for (const cmd of candidates) {
@@ -669,11 +684,16 @@ app.listen(PORT, '127.0.0.1', () => {
         break;
       }
     }
-    if (!launched) exec(`start ${appUrl}`);
+    if (!launched) exec(`start "" "${appUrl}"`);
   } else if (process.platform === 'darwin') {
-    exec(`open ${appUrl}`);
+    exec(`open "${appUrl}"`);
   } else {
-    // Linux: usar xdg-open para abrir el navegador predeterminado
-    exec(`xdg-open ${appUrl} || sensible-browser ${appUrl} || x-www-browser ${appUrl}`);
+    // Linux y WSL: intentar abrir en entorno gráfico o navegador de Windows si es WSL
+    const isWsl = fs.existsSync('/proc/version') && fs.readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft');
+    if (isWsl && fs.existsSync('/mnt/c/Windows/System32/cmd.exe')) {
+      exec(`/mnt/c/Windows/System32/cmd.exe /c start "" "${appUrl}"`);
+    } else {
+      exec(`xdg-open "${appUrl}" || sensible-browser "${appUrl}" || x-www-browser "${appUrl}"`);
+    }
   }
 });

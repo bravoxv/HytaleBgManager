@@ -122,6 +122,7 @@ window.addEventListener('beforeunload', () => {
 });
 
 async function init() {
+    fetch('/api/ping').catch(() => {});
     await loadVersions();
     await loadData();
     await loadNewsStatus();
