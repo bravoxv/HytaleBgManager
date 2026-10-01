@@ -473,7 +473,6 @@ function showToast(msg, isError = false) {
 
 // --- Interfaz de Linux: Selección de Carpeta y Búsqueda de Archivos ---
 const linuxFolderInput = document.getElementById('linux-folder-input');
-const linuxDirPicker = document.getElementById('linux-dir-picker');
 const btnLinuxScan = document.getElementById('btn-linux-scan');
 const linuxStatusSummary = document.getElementById('linux-status-summary');
 const badgeJson = document.getElementById('badge-json');
@@ -597,17 +596,6 @@ if (linuxFolderInput) {
     });
 }
 
-if (linuxDirPicker) {
-    linuxDirPicker.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const first = e.target.files[0];
-            const rel = first.webkitRelativePath || '';
-            const rootDirName = rel.split('/')[0];
-            showToast(`Carpeta seleccionada: ${rootDirName}. Buscando...`);
-            performLinuxPathSearch();
-        }
-    });
-}
 
 // Botón limpiar ruta: borra la configuración guardada y resetea los badges
 const btnClearPath = document.getElementById('btn-clear-path');
