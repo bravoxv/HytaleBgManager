@@ -117,9 +117,7 @@ const avatarLeftNum = document.getElementById('avatar-left-num');
 const btnApplyAvatar = document.getElementById('btn-apply-avatar');
 const btnResetAvatar = document.getElementById('btn-reset-avatar');
 
-window.addEventListener('beforeunload', () => {
-    navigator.sendBeacon('/api/shutdown');
-});
+// El servidor se mantiene activo mientras se use la aplicación
 
 async function init() {
     fetch('/api/ping').catch(() => {});

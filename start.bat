@@ -12,4 +12,5 @@ if not exist node_modules (
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$desktop = [Environment]::GetFolderPath('Desktop'); $s = (New-Object -ComObject WScript.Shell).CreateShortcut(\"$desktop\\Hytale BG Manager.lnk\"); $s.TargetPath = 'wscript.exe'; $s.Arguments = '\"\"\"' + $PSScriptRoot + '\\start.vbs\"\"\"'; $s.WorkingDirectory = $PSScriptRoot; $s.Description = 'Hytale Main Menu Background Editor'; $s.Save()" 2>nul
 
 :: Iniciar el servidor Node.js directamente usando node estándar
-start "" /B node server.js
+start "HytaleBgServer" /B node server.js
+

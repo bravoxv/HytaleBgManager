@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const multer = require('multer');
 
 const app = express();
@@ -39,15 +39,9 @@ app.get('/windows', (req, res) => {
   res.sendFile(path.join(publicPath, 'index.html'));
 });
 
-let shutdownTimeout = null;
-
-// Endpoint para cerrar el proceso del servidor cuando se cierra la ventana del navegador
+// Endpoint de estado del servidor
 app.post('/api/shutdown', (req, res) => {
-  res.json({ success: true, message: 'Programando cierre de HytaleBgServer...' });
-  if (shutdownTimeout) clearTimeout(shutdownTimeout);
-  shutdownTimeout = setTimeout(() => {
-    process.exit(0);
-  }, 2500);
+  res.json({ success: true, message: 'OK' });
 });
 
 // Endpoint ping para cancelar el apagado si la pestaña fue recargada o abierta de nuevo
@@ -668,23 +662,32 @@ app.listen(PORT, '127.0.0.1', () => {
 
   if (process.platform === 'win32') {
     const candidates = [
-      `"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe" --app=${appUrl} --window-size=1200,850`,
-      `"C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe" --app=${appUrl} --window-size=1200,850`,
-      `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --app=${appUrl} --window-size=1200,850`,
-      `"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" --app=${appUrl} --window-size=1200,850`,
-      `"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" --app=${appUrl} --window-size=1200,850`,
-      `"C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe" --app=${appUrl} --window-size=1200,850`,
+      'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+      'C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+      'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
     ];
     let launched = false;
-    for (const cmd of candidates) {
-      const exe = cmd.split('"')[1];
+    for (const exe of candidates) {
       if (fs.existsSync(exe)) {
-        exec(cmd);
-        launched = true;
-        break;
+        try {
+          const child = spawn(exe, [`--app=${appUrl}`, '--window-size=1200,850'], {
+            detached: true,
+            stdio: 'ignore'
+          });
+          child.unref();
+          launched = true;
+          break;
+        } catch (e) {
+          console.error('Error al lanzar navegador:', e);
+        }
       }
     }
-    if (!launched) exec(`start "" "${appUrl}"`);
+    if (!launched) {
+      exec(`start "" "${appUrl}"`);
+    }
   } else if (process.platform === 'darwin') {
     exec(`open "${appUrl}"`);
   } else {
