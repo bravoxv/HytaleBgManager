@@ -21,17 +21,63 @@ where npm >nul 2>nul
 if %ERRORLEVEL% neq 0 (
     echo.
     echo ========================================================
-    echo ERROR: Node.js / npm no esta instalado en esta PC.
-    echo.
-    echo Hytale BG Manager necesita Node.js para ejecutarse.
-    echo Descargalo e instalalo desde: https://nodejs.org/
+    echo AVISO: Node.js no esta instalado en este equipo.
+    echo Hytale BG Manager lo necesita para poder funcionar.
     echo ========================================================
     echo.
-    echo Abriendo la pagina de descarga de Node.js...
-    start https://nodejs.org/
-    echo.
-    pause
-    exit /b 1
+    set /p "INSTALL_CHOICE=Deseas descargar e instalar Node.js ahora mismo? (s/n): "
+    if /i "%INSTALL_CHOICE%"=="s" (
+        echo.
+        echo Intentando instalar Node.js automaticamente...
+        
+        :: 1. Probar con winget si esta disponible en Windows 10/11
+        where winget >nul 2>nul
+        if %ERRORLEVEL% equ 0 (
+            echo Descargando e instalando con winget, por favor espera...
+            winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent
+        ) else (
+            :: 2. Descargar instalador oficial MSI via curl o powershell
+            echo Descargando instalador de Node.js...
+            powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi', 'node_installer.msi')"
+            if exist node_installer.msi (
+                echo Instalando Node.js... Completa el asistente en pantalla.
+                msiexec /i node_installer.msi
+                del node_installer.msi >nul 2>&1
+            ) else (
+                echo No se pudo descargar el instalador automaticamente.
+                echo Puedes descargarlo manualmente desde: https://nodejs.org/
+                pause
+                exit /b 1
+            )
+        )
+
+        :: Refrescar variables de entorno de la sesion
+        if exist "%ProgramFiles%\nodejs\npm.cmd" (
+            set "PATH=%ProgramFiles%\nodejs;%PATH%"
+        ) else if exist "%ProgramFiles(x86)%\nodejs\npm.cmd" (
+            set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
+        )
+
+        where npm >nul 2>nul
+        if %ERRORLEVEL% equ 0 (
+            echo.
+            echo Node.js instalado con exito! Continuando con el inicio...
+            echo.
+        ) else (
+            echo.
+            echo Node.js ha sido instalado. Por favor cierra esta ventana
+            echo y vuelve a abrir 'start.bat' para aplicar los cambios del sistema.
+            echo.
+            pause
+            exit /b 0
+        )
+    ) else (
+        echo.
+        echo Operacion cancelada por el usuario.
+        echo.
+        pause
+        exit /b 1
+    )
 )
 
 :: Instalar dependencias la primera vez
