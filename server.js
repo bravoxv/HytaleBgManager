@@ -8,6 +8,17 @@ const multer = require('multer');
 const app = express();
 const PORT = 4785;
 
+// Exportar función para que Electron la use como servidor integrado
+function createServer(port, onReady) {
+  const p = port || PORT;
+  return app.listen(p, '127.0.0.1', () => {
+    console.log(`Servidor Express iniciado en http://127.0.0.1:${p}`);
+    if (typeof onReady === 'function') onReady();
+  });
+}
+
+module.exports = { createServer };
+
 app.use(cors());
 app.use(express.json());
 
@@ -39,17 +50,8 @@ app.get('/windows', (req, res) => {
   res.sendFile(path.join(publicPath, 'index.html'));
 });
 
-// Endpoint de estado del servidor
-app.post('/api/shutdown', (req, res) => {
-  res.json({ success: true, message: 'OK' });
-});
-
-// Endpoint ping para cancelar el apagado si la pestaña fue recargada o abierta de nuevo
+// Endpoint de estado/ping (Electron gestiona el ciclo de vida de la app)
 app.get('/api/ping', (req, res) => {
-  if (shutdownTimeout) {
-    clearTimeout(shutdownTimeout);
-    shutdownTimeout = null;
-  }
   res.json({ success: true, message: 'pong' });
 });
 
@@ -656,47 +658,5 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.json({ success: true, fileName: req.file.filename });
 });
 
-app.listen(PORT, '127.0.0.1', () => {
-  const appUrl = `http://127.0.0.1:${PORT}`;
-  console.log(`Servidor iniciado (localhost seguro): ${appUrl}`);
 
-  if (process.platform === 'win32') {
-    const candidates = [
-      'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
-      'C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
-      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-      'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
-    ];
-    let launched = false;
-    for (const exe of candidates) {
-      if (fs.existsSync(exe)) {
-        try {
-          const child = spawn(exe, [`--app=${appUrl}`, '--window-size=1200,850'], {
-            detached: true,
-            stdio: 'ignore'
-          });
-          child.unref();
-          launched = true;
-          break;
-        } catch (e) {
-          console.error('Error al lanzar navegador:', e);
-        }
-      }
-    }
-    if (!launched) {
-      exec(`start "" "${appUrl}"`);
-    }
-  } else if (process.platform === 'darwin') {
-    exec(`open "${appUrl}"`);
-  } else {
-    // Linux y WSL: intentar abrir en entorno gráfico o navegador de Windows si es WSL
-    const isWsl = fs.existsSync('/proc/version') && fs.readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft');
-    if (isWsl && fs.existsSync('/mnt/c/Windows/System32/cmd.exe')) {
-      exec(`/mnt/c/Windows/System32/cmd.exe /c start "" "${appUrl}"`);
-    } else {
-      exec(`xdg-open "${appUrl}" || sensible-browser "${appUrl}" || x-www-browser "${appUrl}"`);
-    }
-  }
-});
+
