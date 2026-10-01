@@ -25,9 +25,9 @@ if %ERRORLEVEL% neq 0 (
     echo Hytale BG Manager lo necesita para poder funcionar.
     echo ========================================================
     echo.
-    echo Deseas descargar e instalar Node.js ahora mismo?
-    choice /c sn /n /m "[S] Si  /  [N] No: "
-    if errorlevel 2 (
+    set "CHOICE_INPUT=S"
+    set /p "CHOICE_INPUT=[S] Si  /  [N] No (por defecto: S): "
+    if /i "%CHOICE_INPUT%"=="N" (
         echo.
         echo Operacion cancelada por el usuario.
         echo.
