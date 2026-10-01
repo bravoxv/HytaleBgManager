@@ -53,6 +53,54 @@
                     </div>
                 </div>
 
+                <!-- Selector de Carpeta Hytale y Búsqueda de Archivos (Multiplataforma: Windows, Linux, Mac) -->
+                <div class="card hytale-folder-card" style="margin-bottom: 20px; border-color: #6366f1; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);">
+                    <div class="card-header">
+                        <h3 style="display:flex; align-items:center; gap:8px;">
+                            <span>📁</span> <span data-i18n="hytaleFolderTitle">Carpeta de Instalación de Hytale</span>
+                        </h3>
+                        <span id="platform-badge" style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#a5b4fc; padding:4px 10px; border-radius:12px; border:1px solid rgba(99,102,241,0.3); font-weight:600;">
+                            Hytale Path
+                        </span>
+                    </div>
+                    <p class="help-text" data-i18n="hytaleFolderHelp">
+                        Selecciona o introduce la carpeta donde tienes instalado Hytale. El programa buscará automáticamente los archivos necesarios para su funcionamiento (<code>MainMenuBackgrounds.json</code>, <code>BackgroundImages</code>, etc.).
+                    </p>
+
+                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap;">
+                        <input type="text" id="linux-folder-input" placeholder="Ej: C:\Users\TuUsuario\AppData\Roaming\Hytale\install o ~/.local/share/Hytale" style="flex:1; min-width: 250px; padding: 10px 14px; background: #090d11; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.9rem;">
+                        <input type="file" id="linux-dir-picker" webkitdirectory directory style="display:none;">
+                        <label for="linux-dir-picker" class="btn btn-secondary" style="cursor: pointer; white-space: nowrap; padding: 10px 16px;" data-i18n="browseBtn">
+                            📂 Examinar...
+                        </label>
+                        <button id="btn-linux-scan" class="btn btn-primary" style="white-space: nowrap; padding: 10px 18px;" data-i18n="scanFilesBtn">
+                            🔍 Buscar Archivos
+                        </button>
+                    </div>
+
+                    <!-- Indicadores de archivos detectados -->
+                    <div id="linux-scan-status-box" style="margin-top: 14px; padding: 14px; background: rgba(9, 13, 17, 0.7); border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                            <span style="font-size:0.85rem; font-weight:600; color:#cbd5e1;" data-i18n="filesDetectedLabel">Archivos necesarios detectados:</span>
+                            <strong id="linux-status-summary" style="font-size:0.85rem; color:#10b981;">Comprobando...</strong>
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; font-size: 0.8rem;">
+                            <div id="badge-json" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                                ⏳ MainMenuBackgrounds.json
+                            </div>
+                            <div id="badge-textures" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                                ⏳ Carpeta BackgroundImages
+                            </div>
+                            <div id="badge-news" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                                ⏳ NewsTilesCarousel.ui
+                            </div>
+                            <div id="badge-homepage" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                                ⏳ HomePage.ui
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-grid">
                     <!-- Images & Interface Settings -->
                     <div class="card">

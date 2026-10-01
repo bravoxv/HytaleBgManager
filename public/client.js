@@ -26,7 +26,11 @@ const translations = {
         avatarPosTop: "Posición Vertical (Top):", avatarPosLeft: "Posición Horizontal (Left):",
         avatarApply: "✅ Aplicar Posición del Personaje", avatarReset: "↺ Por Defecto", avatarStatusText: "Estado:",
         avatarStatusVisible: "Visible", avatarStatusHidden: "Oculto (Visible: false)",
-        toastAvatarApplied: "¡Configuración del personaje guardada y aplicada!"
+        toastAvatarApplied: "¡Configuración del personaje guardada y aplicada!",
+        hytaleFolderTitle: "Carpeta de Instalación de Hytale",
+        hytaleFolderHelp: "Selecciona o introduce la carpeta donde tienes instalado Hytale. El programa buscará automáticamente los archivos necesarios para su funcionamiento (MainMenuBackgrounds.json, BackgroundImages, etc.).",
+        browseBtn: "📂 Examinar...", scanFilesBtn: "🔍 Buscar Archivos",
+        filesDetectedLabel: "Archivos necesarios detectados:"
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -50,7 +54,11 @@ const translations = {
         avatarSectionHelp: "Hide or move the character on the main menu (HomePage.ui).",
         avatarPosTop: "Vertical Position (Top):", avatarPosLeft: "Horizontal Position (Left):",
         avatarApply: "✅ Apply Character Position", avatarStatusText: "Status:",
-        avatarStatusVisible: "Visible", avatarStatusHidden: "Hidden (Width/Height: 0)"
+        avatarStatusVisible: "Visible", avatarStatusHidden: "Hidden (Width/Height: 0)",
+        hytaleFolderTitle: "Hytale Installation Folder",
+        hytaleFolderHelp: "Select or enter the folder where Hytale is installed. The tool will automatically locate required files (MainMenuBackgrounds.json, BackgroundImages, etc.).",
+        browseBtn: "📂 Browse...", scanFilesBtn: "🔍 Scan Files",
+        filesDetectedLabel: "Required files detected:"
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -74,7 +82,11 @@ const translations = {
         avatarSectionHelp: "Ocultar ou mover o personagem no menu principal (HomePage.ui).",
         avatarPosTop: "Posição Vertical (Top):", avatarPosLeft: "Posição Horizontal (Left):",
         avatarApply: "✅ Aplicar Posição do Personagem", avatarStatusText: "Estado:",
-        avatarStatusVisible: "Visível", avatarStatusHidden: "Oculto (Width/Height: 0)"
+        avatarStatusVisible: "Visível", avatarStatusHidden: "Oculto (Width/Height: 0)",
+        hytaleFolderTitle: "Pasta de Instalação do Hytale",
+        hytaleFolderHelp: "Selecione ou insira a pasta onde o Hytale está instalado. O programa buscará automaticamente os arquivos necessários (MainMenuBackgrounds.json, BackgroundImages, etc.).",
+        browseBtn: "📂 Procurar...", scanFilesBtn: "🔍 Procurar Arquivos",
+        filesDetectedLabel: "Arquivos necessários detectados:"
     }
 };
 
@@ -516,9 +528,20 @@ async function checkLinuxHytaleStatus() {
         if (res.success) {
             linuxFolderInput.value = res.customPath || res.currentPath || '';
             updateFileBadges(res.filesDetected, res.details || {});
+            
+            const badge = document.getElementById('platform-badge');
+            if (badge) {
+                if (res.isLinux) {
+                    badge.textContent = 'Linux';
+                } else if (res.isMac) {
+                    badge.textContent = 'macOS';
+                } else {
+                    badge.textContent = 'Windows';
+                }
+            }
         }
     } catch (e) {
-        console.error('Error al consultar ruta de Hytale en Linux:', e);
+        console.error('Error al consultar ruta de Hytale:', e);
     }
 }
 

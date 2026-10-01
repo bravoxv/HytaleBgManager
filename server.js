@@ -18,18 +18,11 @@ const publicPath = fs.existsSync(path.join(__dirname, 'public'))
 app.use(express.static(publicPath));
 
 app.get('/', (req, res) => {
-  const isLinux = process.platform === 'linux' || process.argv.includes('--linux');
-  const fileToServe = isLinux ? 'linux.html' : 'index.html';
-  const filePath = path.join(publicPath, fileToServe);
+  const filePath = path.join(publicPath, 'index.html');
   if (fs.existsSync(filePath)) {
     res.sendFile(filePath);
   } else {
-    const indexPath = path.join(publicPath, 'index.html');
-    if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
-    } else {
-      res.status(404).send('index.html no encontrado');
-    }
+    res.status(404).send('index.html no encontrado');
   }
 });
 
@@ -581,7 +574,10 @@ app.get('/api/hytale-path', (req, res) => {
     success: true,
     currentPath,
     customPath: cfg.customHytalePath || null,
+    platform: process.platform,
     isLinux: process.platform === 'linux',
+    isMac: process.platform === 'darwin',
+    isWindows: process.platform === 'win32',
     exists: fs.existsSync(currentPath),
     filesDetected: !!(found && found.jsonPath),
     details: found
