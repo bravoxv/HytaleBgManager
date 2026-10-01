@@ -34,10 +34,23 @@ app.post('/api/shutdown', (req, res) => {
   }, 400);
 });
 
-const APPDATA = process.env.APPDATA ||
-  (process.platform === 'darwin' ? process.env.HOME + '/Library/Preferences' : process.env.HOME + '/.config');
+const os = require('os');
 
-const INSTALL_BASE_DIR = path.join(APPDATA, 'Hytale', 'install');
+function getHytaleInstallBase() {
+  const home = os.homedir();
+  if (process.platform === 'win32') {
+    return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Hytale', 'install');
+  } else if (process.platform === 'darwin') {
+    return path.join(home, 'Library', 'Application Support', 'Hytale', 'install');
+  } else {
+    // Linux y otros UNIX: ~/.local/share/Hytale/install o ~/.config/Hytale/install
+    const localShare = path.join(home, '.local', 'share', 'Hytale', 'install');
+    if (fs.existsSync(localShare)) return localShare;
+    return path.join(home, '.config', 'Hytale', 'install');
+  }
+}
+
+const INSTALL_BASE_DIR = getHytaleInstallBase();
 
 function getVersions() {
   if (!fs.existsSync(INSTALL_BASE_DIR)) return ['pre-release'];
@@ -445,33 +458,30 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.json({ success: true, fileName: req.file.filename });
 });
 
-app.listen(PORT, () => {
-  const appUrl = `http://localhost:${PORT}`;
-  console.log(`Servidor iniciado: ${appUrl}`);
+app.listen(PORT, '127.0.0.1', () => {
+  const appUrl = `http://127.0.0.1:${PORT}`;
+  console.log(`Servidor iniciado (localhost seguro): ${appUrl}`);
 
-  const candidates = [
-    `"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" --app=${appUrl} --window-size=1200,850 --window-position=100,50`,
-    `"C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe" --app=${appUrl} --window-size=1200,850`,
-    `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --app=${appUrl} --window-size=1200,850`,
-    `"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" --app=${appUrl} --window-size=1200,850`,
-    `"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe" --app=${appUrl} --window-size=1200,850`,
-  ];
-
-  function tryLaunch(index) {
-    if (index >= candidates.length) {
-      exec(`start ${appUrl}`);
-      return;
+  if (process.platform === 'win32') {
+    const candidates = [
+      `"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" --app=${appUrl} --window-size=1200,850`,
+      `"C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe" --app=${appUrl} --window-size=1200,850`,
+      `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --app=${appUrl} --window-size=1200,850`,
+    ];
+    let launched = false;
+    for (const cmd of candidates) {
+      const exe = cmd.split('"')[1];
+      if (fs.existsSync(exe)) {
+        exec(cmd);
+        launched = true;
+        break;
+      }
     }
-    const cmd = candidates[index];
-    const exePath = cmd.split('"')[1];
-    if (fs.existsSync(exePath)) {
-      exec(cmd, (err) => {
-        if (err) tryLaunch(index + 1);
-      });
-    } else {
-      tryLaunch(index + 1);
-    }
+    if (!launched) exec(`start ${appUrl}`);
+  } else if (process.platform === 'darwin') {
+    exec(`open ${appUrl}`);
+  } else {
+    // Linux: usar xdg-open para abrir el navegador predeterminado
+    exec(`xdg-open ${appUrl} || sensible-browser ${appUrl} || x-www-browser ${appUrl}`);
   }
-
-  tryLaunch(0);
 });
