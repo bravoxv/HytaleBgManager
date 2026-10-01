@@ -151,6 +151,31 @@ function getHytaleInstallBase() {
     return config.customHytalePath;
   }
 
+  // 1. Priorizar el directorio actual donde se ejecutó el .bat / .sh y carpetas cercanas
+  const currentDir = process.cwd();
+  const scriptDir = __dirname;
+  const portableCandidates = [
+    path.join(currentDir, 'Hytale'),
+    path.join(currentDir, 'install'),
+    path.join(currentDir, 'game'),
+    currentDir,
+    path.join(scriptDir, '..', 'Hytale'),
+    path.join(scriptDir, '..', 'install'),
+    path.join(scriptDir, '..')
+  ];
+
+  for (const cand of portableCandidates) {
+    if (fs.existsSync(cand)) {
+      // Si tiene estructura directa de juego o subcarpetas pre-release / release
+      if (fs.existsSync(path.join(cand, 'pre-release')) || 
+          fs.existsSync(path.join(cand, 'release')) ||
+          fs.existsSync(path.join(cand, 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json'))) {
+        return cand;
+      }
+    }
+  }
+
+  // 2. Si no está en el directorio del .bat/.sh, buscar en las rutas estándar por sistema operativo
   const home = os.homedir();
   if (process.platform === 'win32') {
     return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Hytale', 'install');
