@@ -31,7 +31,10 @@ const translations = {
         hytaleFolderHelp: "Selecciona o introduce la carpeta donde tienes instalado Hytale. El programa buscará automáticamente los archivos necesarios para su funcionamiento (MainMenuBackgrounds.json, BackgroundImages, etc.).",
         scanFilesBtn: "🔍 Buscar Archivos",
         filesDetectedLabel: "Archivos necesarios detectados:",
-        toastUpdateSynced: "⚡ ¡Actualización de Hytale detectada! Personalizaciones resincronizadas automáticamente."
+        toastUpdateSynced: "⚡ ¡Actualización de Hytale detectada! Personalizaciones resincronizadas automáticamente.",
+        confirmClearTitle: "¿Eliminar la ruta guardada?",
+        confirmClearMsg: "Se eliminará la carpeta de instalación de Hytale configurada. Tendrás que volver a seleccionarla.\n\n¿Deseas continuar?",
+        toastClearPath: "Ruta eliminada. Selecciona una nueva carpeta de Hytale."
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -60,7 +63,10 @@ const translations = {
         hytaleFolderHelp: "Select or enter the folder where Hytale is installed. The tool will automatically locate required files (MainMenuBackgrounds.json, BackgroundImages, etc.).",
         scanFilesBtn: "🔍 Scan Files",
         filesDetectedLabel: "Required files detected:",
-        toastUpdateSynced: "⚡ Hytale update detected! Customizations re-applied automatically."
+        toastUpdateSynced: "⚡ Hytale update detected! Customizations re-applied automatically.",
+        confirmClearTitle: "Remove saved path?",
+        confirmClearMsg: "The configured Hytale installation folder will be removed. You will need to select it again.\n\nDo you want to continue?",
+        toastClearPath: "Path removed. Select your Hytale installation folder again."
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -89,7 +95,10 @@ const translations = {
         hytaleFolderHelp: "Selecione ou insira a pasta onde o Hytale está instalado. O programa buscará automaticamente os arquivos necessários (MainMenuBackgrounds.json, BackgroundImages, etc.).",
         scanFilesBtn: "🔍 Procurar Arquivos",
         filesDetectedLabel: "Arquivos necessários detectados:",
-        toastUpdateSynced: "⚡ Atualização do Hytale detectada! Personalizações reaplicadas automaticamente."
+        toastUpdateSynced: "⚡ Atualização do Hytale detectada! Personalizações reaplicadas automaticamente.",
+        confirmClearTitle: "Remover caminho salvo?",
+        confirmClearMsg: "A pasta de instalação do Hytale configurada será removida. Você precisará selecioná-la novamente.\n\nDeseja continuar?",
+        toastClearPath: "Caminho removido. Selecione a pasta de instalação do Hytale novamente."
     }
 };
 
@@ -655,6 +664,10 @@ if (linuxFolderInput) {
 const btnClearPath = document.getElementById('btn-clear-path');
 if (btnClearPath) {
     btnClearPath.addEventListener('click', async () => {
+        const t = translations[currentLang] || translations['es'];
+        const msg = (t.confirmClearTitle ? t.confirmClearTitle + '\n\n' : '') +
+            (t.confirmClearMsg || '¿Deseas eliminar la ruta guardada de Hytale? Tendrás que volver a seleccionarla.');
+        if (!window.confirm(msg)) return;
         try {
             await fetch('/api/hytale-path', { method: 'DELETE' });
             if (linuxFolderInput) linuxFolderInput.value = '';
@@ -663,9 +676,9 @@ if (btnClearPath) {
                 linuxStatusSummary.textContent = '⚠️ Sin carpeta configurada.';
                 linuxStatusSummary.style.color = '#f59e0b';
             }
-            showToast('Ruta limpiada. Selecciona una nueva carpeta.');
+            showToast(t.toastClearPath || 'Ruta limpiada. Selecciona una nueva carpeta.');
         } catch(e) {
-            showToast('Error al limpiar la ruta', true);
+            showToast((t.toastError || 'Error') + ' al limpiar la ruta', true);
         }
     });
 }
