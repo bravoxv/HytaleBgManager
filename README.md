@@ -10,11 +10,10 @@ Para garantizar la máxima seguridad y compatibilidad total con **Linux**, **mac
 
 ### 🪟 En Windows:
 
-1. **Requisito**: Tener instalado [Node.js](https://nodejs.org/).
+1. **Requisito**: Tener instalado [Node.js](https://nodejs.org/) (v16 o superior). Si no está instalado, el script intentará ayudarte a descargarlo/instalarlo automáticamente.
 2. Haz doble clic en **`start.bat`**.
-   - Se abrirá la aplicación en tu navegador web.
-   - **La ventana de la consola (CMD) se cerrará inmediatamente** y el programa quedará corriendo en segundo plano.
-   - **Se creará un acceso directo en tu Escritorio** (`Hytale BG Manager.lnk`) para que puedas abrirlo fácilmente en el futuro.
+   - El script comprobará las dependencias necesarias (`node_modules`) y arrancará la aplicación mediante Electron en primer plano.
+   - Podrás visualizar el registro de inicio y los detalles en la consola mientras se abre la ventana de la aplicación.
 
 ---
 
@@ -24,15 +23,16 @@ Para garantizar la máxima seguridad y compatibilidad total con **Linux**, **mac
    - **Ubuntu/Debian**: `sudo apt install nodejs npm`
    - **Arch Linux**: `sudo pacman -S nodejs npm`
    - **Fedora**: `sudo dnf install nodejs npm`
+   - **macOS** (Homebrew): `brew install node` (o descargar el instalador `.pkg` oficial).
 
 2. **Ejecutar**:
-   Abre una terminal en la carpeta del proyecto y ejecuta por única vez:
+   Abre una terminal en la carpeta del proyecto y ejecuta:
    ```bash
    chmod +x start.sh
    ./start.sh
    ```
-   - **La consola se liberará de inmediato** (la aplicación corre en segundo plano con `nohup`).
-   - **Se generará un acceso directo `.desktop` en tu Escritorio** (`Hytale BG Manager`) para que puedas iniciarlo con un doble clic.
+   - El script verificará Node.js, instalará las dependencias si faltan y lanzará la aplicación con `npm start`.
+   - Se abrirá la interfaz de la aplicación y la consola permanecerá activa mostrando los logs del proceso.
 
 ---
 

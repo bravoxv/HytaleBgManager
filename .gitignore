@@ -2,6 +2,8 @@ node_modules/
 dist/
 out/
 *.log
+launch_log.txt
 config.json
+backups/
 .DS_Store
 Thumbs.db

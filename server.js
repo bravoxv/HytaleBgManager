@@ -3,6 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const { exec, spawn } = require('child_process');
+const crypto = require('crypto');
 const multer = require('multer');
 
 const app = express();
@@ -19,7 +20,16 @@ function createServer(port, onReady) {
 
 module.exports = { createServer };
 
-app.use(cors());
+const allowedOrigins = [`http://127.0.0.1:${PORT}`, `http://localhost:${PORT}`];
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permitir peticiones sin origen (mismo origen / navegadores / Electron) o en la lista permitida
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Acceso no permitido por política CORS'));
+  }
+}));
 app.use(express.json());
 
 const publicPath = fs.existsSync(path.join(__dirname, 'public'))
@@ -28,26 +38,13 @@ const publicPath = fs.existsSync(path.join(__dirname, 'public'))
 
 app.use(express.static(publicPath));
 
-app.get('/', (req, res) => {
+app.get(['/', '/linux', '/windows'], (req, res) => {
   const filePath = path.join(publicPath, 'index.html');
   if (fs.existsSync(filePath)) {
     res.sendFile(filePath);
   } else {
     res.status(404).send('index.html no encontrado');
   }
-});
-
-app.get('/linux', (req, res) => {
-  const linuxPath = path.join(publicPath, 'linux.html');
-  if (fs.existsSync(linuxPath)) {
-    res.sendFile(linuxPath);
-  } else {
-    res.sendFile(path.join(publicPath, 'index.html'));
-  }
-});
-
-app.get('/windows', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // Endpoint de estado/ping (Electron gestiona el ciclo de vida de la app)
@@ -84,6 +81,183 @@ function saveConfig(data) {
     console.error('Error al guardar config.json:', e);
     return false;
   }
+}
+
+// ── Sistema de Respaldos de Originales y Detección Reactiva de Versión ───────
+function getBackupsDir() {
+  const dir = path.join(__dirname, 'backups');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+// Guarda una copia del archivo original sin modificar si aún no existe backup
+function ensureOriginalBackup(originalFilePath, identifier) {
+  try {
+    if (!originalFilePath || !fs.existsSync(originalFilePath)) return;
+    const bDir = getBackupsDir();
+    const backupFile = path.join(bDir, `${identifier}.original`);
+    if (!fs.existsSync(backupFile)) {
+      fs.copyFileSync(originalFilePath, backupFile);
+      console.log(`[Backup] Original guardado: ${identifier}.original`);
+    }
+  } catch (e) {
+    console.error(`[Backup] Error al respaldar ${identifier}:`, e);
+  }
+}
+
+// Calcula una firma/hash del entorno del juego (tamaños, mtimes y rutas)
+function computeGameVersionHash(paths) {
+  try {
+    const hash = crypto.createHash('sha256');
+    const files = [paths.jsonPath, paths.newsCarouselPath, paths.homePagePath].filter(Boolean);
+    let count = 0;
+    for (const f of files) {
+      if (fs.existsSync(f)) {
+        const stat = fs.statSync(f);
+        hash.update(`${f}:${stat.size}:${stat.mtimeMs}`);
+        count++;
+      }
+    }
+    if (count === 0) return null;
+    return hash.digest('hex').substring(0, 16);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Guarda la personalización elegida por el usuario por separado en config.json
+function saveUserCustomization(version, customizationData) {
+  const cfg = loadConfig();
+  const customs = cfg.userCustomizations || {};
+  customs[version] = {
+    ...(customs[version] || {}),
+    ...customizationData,
+    updatedAt: new Date().toISOString()
+  };
+  saveConfig({ userCustomizations: customs });
+}
+
+// Re-aplica las configuraciones del usuario sobre los archivos del juego
+function applyCustomizationToGame(version) {
+  const cfg = loadConfig();
+  const custom = (cfg.userCustomizations && cfg.userCustomizations[version]) || null;
+  if (!custom) return { applied: false, reason: 'Sin personalización guardada' };
+
+  const paths = getPathsForVersion(version);
+  let changed = false;
+
+  // 1. Re-aplicar MainMenuBackgrounds.json
+  if (custom.bgConfig && paths.jsonPath) {
+    try {
+      const dir = path.dirname(paths.jsonPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      ensureOriginalBackup(paths.jsonPath, `${version}_MainMenuBackgrounds.json`);
+      fs.writeFileSync(paths.jsonPath, JSON.stringify(custom.bgConfig, null, 2), 'utf8');
+      changed = true;
+    } catch (e) {
+      console.error('[Sync] Error al aplicar bgConfig:', e);
+    }
+  }
+
+  // 2. Re-aplicar News Carousel (.ui)
+  if (custom.newsVisible !== undefined && paths.newsCarouselPath) {
+    try {
+      const dir = path.dirname(paths.newsCarouselPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      ensureOriginalBackup(paths.newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
+      const targetContent = custom.newsVisible ? DEFAULT_NEWS_UI : INVISIBLE_ZERO_NEWS_UI;
+      fs.writeFileSync(paths.newsCarouselPath, targetContent, 'utf8');
+      changed = true;
+    } catch (e) {
+      console.error('[Sync] Error al aplicar newsVisible:', e);
+    }
+  }
+
+  // 3. Re-aplicar Avatar Preview (.ui)
+  if (custom.avatarConfig && paths.homePagePath && fs.existsSync(paths.homePagePath)) {
+    try {
+      ensureOriginalBackup(paths.homePagePath, `${version}_HomePage.ui`);
+      let content = fs.readFileSync(paths.homePagePath, 'utf8');
+      const isVisible = custom.avatarConfig.visible !== false;
+      const newTop = custom.avatarConfig.top ?? 320;
+      const newLeft = custom.avatarConfig.left ?? 0;
+
+      let newBlock = '';
+      if (!isVisible) {
+        newBlock = `PlayerPreviewComponent #AvatarPreview {\n  Visible: false;\n  Anchor: (Top: 0, Left: -9999, Width: 0, Height: 0);\n}`;
+      } else {
+        const leftStr = newLeft !== 0 ? `Left: ${newLeft}, ` : '';
+        newBlock = `PlayerPreviewComponent #AvatarPreview {\n  Visible: true;\n  Anchor: (${leftStr}Top: ${newTop}, Width: 420, Height: 640);\n}`;
+      }
+
+      const regex = /PlayerPreviewComponent\s+#AvatarPreview\s*\{[\s\S]*?\}/;
+      if (regex.test(content)) {
+        content = content.replace(regex, newBlock);
+      } else {
+        content += `\n\n${newBlock}\n`;
+      }
+      fs.writeFileSync(paths.homePagePath, content, 'utf8');
+      changed = true;
+    } catch (e) {
+      console.error('[Sync] Error al aplicar avatarConfig:', e);
+    }
+  }
+
+  // Actualizar el hash registrado tras aplicar cambios
+  const newHash = computeGameVersionHash(paths);
+  if (newHash) {
+    const vHashes = cfg.lastKnownVersionHashes || {};
+    vHashes[version] = newHash;
+    saveConfig({ lastKnownVersionHashes: vHashes });
+  }
+
+  return { applied: changed };
+}
+
+// Chequeo Reactivo de versión del juego:
+// Compara hash actual contra el último registrado. Si cambió y hay personalización, resincroniza.
+function checkAndHandleVersionUpdate(version) {
+  const paths = getPathsForVersion(version);
+  const currentHash = computeGameVersionHash(paths);
+  if (!currentHash) {
+    return { detected: false, updated: false, reason: 'Archivos no accesibles' };
+  }
+
+  const cfg = loadConfig();
+  const vHashes = cfg.lastKnownVersionHashes || {};
+  const lastHash = vHashes[version];
+
+  if (!lastHash) {
+    // Primera vez que se detecta esta versión: registrar hash y respaldar originales
+    vHashes[version] = currentHash;
+    saveConfig({ lastKnownVersionHashes: vHashes });
+    ensureOriginalBackup(paths.jsonPath, `${version}_MainMenuBackgrounds.json`);
+    ensureOriginalBackup(paths.newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
+    ensureOriginalBackup(paths.homePagePath, `${version}_HomePage.ui`);
+    return { detected: true, updated: false, firstRun: true };
+  }
+
+  if (lastHash !== currentHash) {
+    console.log(`[Actualización detectada] La versión ${version} cambió (Hash anterior: ${lastHash} -> Actual: ${currentHash})`);
+
+    // Guardar nuevo backup del juego recién actualizado como base
+    ensureOriginalBackup(paths.jsonPath, `${version}_MainMenuBackgrounds.json`);
+    ensureOriginalBackup(paths.newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
+    ensureOriginalBackup(paths.homePagePath, `${version}_HomePage.ui`);
+
+    // Re-aplicar personalización del usuario sobre los nuevos archivos
+    const syncRes = applyCustomizationToGame(version);
+
+    return {
+      detected: true,
+      updated: true,
+      previousHash: lastHash,
+      newHash: currentHash,
+      reapplied: syncRes.applied
+    };
+  }
+
+  return { detected: true, updated: false };
 }
 
 // Búsqueda recursiva para encontrar los archivos requeridos de Hytale
@@ -539,7 +713,22 @@ app.post('/api/avatar-status', (req, res) => {
       content += `\n\n${newBlock}\n`;
     }
 
+    ensureOriginalBackup(homePagePath, `${version}_HomePage.ui`);
     fs.writeFileSync(homePagePath, content, 'utf8');
+
+    // Guardar personalización del usuario separada en config.json
+    saveUserCustomization(version, { avatarConfig: { visible: isVisible, top: newTop, left: newLeft } });
+
+    // Actualizar hash registrado
+    const paths = getPathsForVersion(version);
+    const newHash = computeGameVersionHash(paths);
+    if (newHash) {
+      const cfg = loadConfig();
+      const vHashes = cfg.lastKnownVersionHashes || {};
+      vHashes[version] = newHash;
+      saveConfig({ lastKnownVersionHashes: vHashes });
+    }
+
     res.json({ success: true, visible: isVisible, top: newTop, left: newLeft });
   } catch (err) {
     res.json({ success: false, error: err.message });
@@ -549,6 +738,17 @@ app.post('/api/avatar-status', (req, res) => {
 // APIs
 app.get('/api/versions', (req, res) => {
   res.json({ success: true, versions: getVersions() });
+});
+
+// Endpoint de chequeo y sincronización reactiva de versión
+app.get('/api/check-version', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  try {
+    const checkResult = checkAndHandleVersionUpdate(version);
+    res.json({ success: true, version, ...checkResult });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
 });
 
 app.get('/api/news-status', (req, res) => {
@@ -574,8 +774,23 @@ app.post('/api/news-status', (req, res) => {
     const dir = path.dirname(newsCarouselPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
+    ensureOriginalBackup(newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
+
     const targetContent = visible ? DEFAULT_NEWS_UI : INVISIBLE_ZERO_NEWS_UI;
     fs.writeFileSync(newsCarouselPath, targetContent, 'utf8');
+
+    // Guardar personalización del usuario separada en config.json
+    saveUserCustomization(version, { newsVisible: visible });
+
+    // Actualizar hash registrado
+    const paths = getPathsForVersion(version);
+    const newHash = computeGameVersionHash(paths);
+    if (newHash) {
+      const cfg = loadConfig();
+      const vHashes = cfg.lastKnownVersionHashes || {};
+      vHashes[version] = newHash;
+      saveConfig({ lastKnownVersionHashes: vHashes });
+    }
 
     res.json({ success: true, visible });
   } catch (err) {
@@ -613,7 +828,23 @@ app.post('/api/config', (req, res) => {
   try {
     const dir = path.dirname(jsonPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    ensureOriginalBackup(jsonPath, `${version}_MainMenuBackgrounds.json`);
     fs.writeFileSync(jsonPath, JSON.stringify(req.body, null, 2), 'utf8');
+
+    // Guardar personalización del usuario separada en config.json
+    saveUserCustomization(version, { bgConfig: req.body });
+
+    // Actualizar hash registrado
+    const paths = getPathsForVersion(version);
+    const newHash = computeGameVersionHash(paths);
+    if (newHash) {
+      const cfg = loadConfig();
+      const vHashes = cfg.lastKnownVersionHashes || {};
+      vHashes[version] = newHash;
+      saveConfig({ lastKnownVersionHashes: vHashes });
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.json({ success: false, error: err.message });
@@ -637,13 +868,20 @@ app.post('/api/open-folder', (req, res) => {
   const { texturesDir } = getPathsForVersion(version);
   if (!fs.existsSync(texturesDir)) fs.mkdirSync(texturesDir, { recursive: true });
 
-  const openCmd = process.platform === 'win32' ? `explorer "${texturesDir}"` :
-                  process.platform === 'darwin' ? `open "${texturesDir}"` :
-                  `xdg-open "${texturesDir}"`;
+  let child;
+  if (process.platform === 'win32') {
+    child = spawn('explorer.exe', [texturesDir], { detached: true, stdio: 'ignore' });
+  } else if (process.platform === 'darwin') {
+    child = spawn('open', [texturesDir], { detached: true, stdio: 'ignore' });
+  } else {
+    child = spawn('xdg-open', [texturesDir], { detached: true, stdio: 'ignore' });
+  }
 
-  exec(openCmd, (err) => {
-    if (err) console.error('Error al abrir carpeta:', err);
+  child.on('error', (err) => {
+    console.error('Error al abrir carpeta:', err);
   });
+  child.unref();
+
   res.json({ success: true });
 });
 
@@ -759,19 +997,6 @@ app.post('/api/hytale-path', (req, res) => {
   });
 });
 
-// Abrir la interfaz GUI de Linux bajo demanda
-app.post('/api/open-linux-gui', (req, res) => {
-  const guiScript = path.join(__dirname, 'linux_gui.py');
-  if (fs.existsSync(guiScript)) {
-    exec('python3 linux_gui.py', (err) => {
-      if (err) console.error('Error al ejecutar linux_gui.py:', err);
-    });
-    res.json({ success: true, message: 'GUI iniciada' });
-  } else {
-    res.json({ success: false, error: 'linux_gui.py no encontrado' });
-  }
-});
-
 // Upload PNG image
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -782,17 +1007,43 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => cb(null, file.originalname)
 });
+
 const upload = multer({
-  storage, fileFilter: (req, file, cb) => {
+  storage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // Limitar a 25 MB máximo
+  fileFilter: (req, file, cb) => {
     if (path.extname(file.originalname).toLowerCase() !== '.png') {
-      return cb(new Error('Solo se permiten archivos PNG'));
+      return cb(new Error('Solo se permiten archivos con extensión .png'));
     }
     cb(null, true);
   }
 });
 
+// Firma estándar PNG (primeros 8 bytes: 89 50 4E 47 0D 0A 1A 0A)
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.json({ success: false, error: 'No se recibió archivo' });
+
+  // Validar cabecera real (magic bytes) para asegurar que el contenido es un PNG auténtico
+  try {
+    const fd = fs.openSync(req.file.path, 'r');
+    const header = Buffer.alloc(8);
+    fs.readSync(fd, header, 0, 8, 0);
+    fs.closeSync(fd);
+
+    if (!header.equals(PNG_MAGIC)) {
+      // Eliminar el archivo si no es un PNG real
+      fs.unlinkSync(req.file.path);
+      return res.json({ success: false, error: 'El archivo subido no es una imagen PNG válida (firma inválida)' });
+    }
+  } catch (err) {
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    }
+    return res.json({ success: false, error: 'Error al verificar la integridad del archivo subido' });
+  }
+
   res.json({ success: true, fileName: req.file.filename });
 });
 

@@ -54,6 +54,21 @@ if ! command -v npm &> /dev/null; then
     esac
 fi
 
+# Comprobar version minima de Node.js (v16+)
+if command -v node &> /dev/null; then
+    NODE_MAJOR=$(node -v | sed 's/v\([0-9]*\).*/\1/')
+    if [ "$NODE_MAJOR" -lt 16 ]; then
+        echo ""
+        echo "========================================================"
+        echo "ERROR: Se requiere Node.js v16 o superior."
+        echo "Version actual detectada: $(node -v)"
+        echo "Por favor actualiza Node.js desde: https://nodejs.org/"
+        echo "========================================================"
+        echo ""
+        exit 1
+    fi
+fi
+
 # Instalar dependencias si no existen
 if [ ! -d "node_modules" ]; then
     echo "Instalando dependencias..."

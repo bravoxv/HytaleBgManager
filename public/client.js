@@ -29,8 +29,9 @@ const translations = {
         toastAvatarApplied: "¡Configuración del personaje guardada y aplicada!",
         hytaleFolderTitle: "Carpeta de Instalación de Hytale",
         hytaleFolderHelp: "Selecciona o introduce la carpeta donde tienes instalado Hytale. El programa buscará automáticamente los archivos necesarios para su funcionamiento (MainMenuBackgrounds.json, BackgroundImages, etc.).",
-        browseBtn: "📂 Examinar...", scanFilesBtn: "🔍 Buscar Archivos",
-        filesDetectedLabel: "Archivos necesarios detectados:"
+        scanFilesBtn: "🔍 Buscar Archivos",
+        filesDetectedLabel: "Archivos necesarios detectados:",
+        toastUpdateSynced: "⚡ ¡Actualización de Hytale detectada! Personalizaciones resincronizadas automáticamente."
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -57,8 +58,9 @@ const translations = {
         avatarStatusVisible: "Visible", avatarStatusHidden: "Hidden (Width/Height: 0)",
         hytaleFolderTitle: "Hytale Installation Folder",
         hytaleFolderHelp: "Select or enter the folder where Hytale is installed. The tool will automatically locate required files (MainMenuBackgrounds.json, BackgroundImages, etc.).",
-        browseBtn: "📂 Browse...", scanFilesBtn: "🔍 Scan Files",
-        filesDetectedLabel: "Required files detected:"
+        scanFilesBtn: "🔍 Scan Files",
+        filesDetectedLabel: "Required files detected:",
+        toastUpdateSynced: "⚡ Hytale update detected! Customizations re-applied automatically."
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -79,14 +81,15 @@ const translations = {
         toastUploading: "Enviando imagem...", toastUploaded: "salvo em BackgroundImages", toastError: "Erro",
         toastVersionLoaded: "Versão carregada: ",
         avatarSectionTitle: "🧍 Personagem do Menu (AvatarPreview)",
-        avatarSectionHelp: "Ocultar ou mover o personagem no menu principal (HomePage.ui).",
+        avatarSectionHelp: "Ocultar ou mover o personaje no menu principal (HomePage.ui).",
         avatarPosTop: "Posição Vertical (Top):", avatarPosLeft: "Posição Horizontal (Left):",
         avatarApply: "✅ Aplicar Posição do Personagem", avatarStatusText: "Estado:",
         avatarStatusVisible: "Visível", avatarStatusHidden: "Oculto (Width/Height: 0)",
         hytaleFolderTitle: "Pasta de Instalação do Hytale",
         hytaleFolderHelp: "Selecione ou insira a pasta onde o Hytale está instalado. O programa buscará automaticamente os arquivos necessários (MainMenuBackgrounds.json, BackgroundImages, etc.).",
-        browseBtn: "📂 Procurar...", scanFilesBtn: "🔍 Procurar Arquivos",
-        filesDetectedLabel: "Arquivos necessários detectados:"
+        scanFilesBtn: "🔍 Procurar Arquivos",
+        filesDetectedLabel: "Arquivos necessários detectados:",
+        toastUpdateSynced: "⚡ Atualização do Hytale detectada! Personalizações reaplicadas automaticamente."
     }
 };
 
@@ -119,9 +122,26 @@ const btnResetAvatar = document.getElementById('btn-reset-avatar');
 
 // El servidor se mantiene activo mientras se use la aplicación
 
+async function checkGameVersionUpdate() {
+    try {
+        const res = await fetch(`/api/check-version?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
+        if (res.success && res.updated && res.reapplied) {
+            showToast(translations[currentLang].toastUpdateSynced || "⚡ ¡Actualización detectada! Personalización reaplicada.");
+            // Recargar datos tras reaplicación automática
+            await loadData();
+            await loadNewsStatus();
+            await loadAvatarStatus();
+            await refreshTexturePresets();
+        }
+    } catch (e) {
+        console.error('Error al chequear versión de juego:', e);
+    }
+}
+
 async function init() {
     fetch('/api/ping').catch(() => {});
     await loadVersions();
+    await checkGameVersionUpdate();
     await loadData();
     await loadNewsStatus();
     await loadAvatarStatus();
@@ -130,6 +150,7 @@ async function init() {
 
     versionSelect.addEventListener('change', async e => {
         currentVersion = e.target.value;
+        await checkGameVersionUpdate();
         const dataRes = await loadData();
         await loadNewsStatus();
         await loadAvatarStatus();
@@ -561,10 +582,13 @@ async function checkLinuxHytaleStatus() {
             if (badge) {
                 if (res.isLinux) {
                     badge.textContent = 'Linux';
+                    if (!linuxFolderInput.value) linuxFolderInput.placeholder = 'Ej: ~/.local/share/Hytale/install o ~/.config/Hytale';
                 } else if (res.isMac) {
                     badge.textContent = 'macOS';
+                    if (!linuxFolderInput.value) linuxFolderInput.placeholder = 'Ej: ~/Library/Application Support/Hytale/install';
                 } else {
                     badge.textContent = 'Windows';
+                    if (!linuxFolderInput.value) linuxFolderInput.placeholder = 'Ej: C:\\Users\\TuUsuario\\AppData\\Roaming\\Hytale\\install';
                 }
             }
         }
