@@ -460,4 +460,144 @@ function showToast(msg, isError = false) {
     });
 }
 
+// --- Interfaz de Linux: Selección de Carpeta y Búsqueda de Archivos ---
+const linuxFolderInput = document.getElementById('linux-folder-input');
+const linuxDirPicker = document.getElementById('linux-dir-picker');
+const btnLinuxScan = document.getElementById('btn-linux-scan');
+const linuxStatusSummary = document.getElementById('linux-status-summary');
+const badgeJson = document.getElementById('badge-json');
+const badgeTextures = document.getElementById('badge-textures');
+const badgeNews = document.getElementById('badge-news');
+const badgeHomepage = document.getElementById('badge-homepage');
+
+function updateFileBadges(detected, details = {}) {
+    if (!badgeJson) return;
+
+    function setBadge(el, name, found) {
+        if (!el) return;
+        if (found) {
+            el.innerHTML = `✅ ${name}`;
+            el.style.background = 'rgba(16, 185, 129, 0.15)';
+            el.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            el.style.color = '#34d399';
+        } else {
+            el.innerHTML = `❌ ${name}`;
+            el.style.background = 'rgba(239, 68, 68, 0.12)';
+            el.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            el.style.color = '#f87171';
+        }
+    }
+
+    const hasJson = !!details.jsonPath;
+    const hasTextures = !!details.texturesDir;
+    const hasNews = !!details.newsCarouselPath;
+    const hasHome = !!details.homePagePath;
+
+    setBadge(badgeJson, 'MainMenuBackgrounds.json', hasJson);
+    setBadge(badgeTextures, 'Carpeta BackgroundImages', hasTextures);
+    setBadge(badgeNews, 'NewsTilesCarousel.ui', hasNews);
+    setBadge(badgeHomepage, 'HomePage.ui', hasHome);
+
+    if (linuxStatusSummary) {
+        if (detected || hasJson) {
+            linuxStatusSummary.textContent = '✅ ¡Archivos necesarios encontrados!';
+            linuxStatusSummary.style.color = '#10b981';
+        } else {
+            linuxStatusSummary.textContent = '⚠️ Archivos de Hytale no detectados en esta ruta.';
+            linuxStatusSummary.style.color = '#f59e0b';
+        }
+    }
+}
+
+async function checkLinuxHytaleStatus() {
+    if (!linuxFolderInput) return;
+    try {
+        const res = await fetch('/api/hytale-path').then(r => r.json());
+        if (res.success) {
+            linuxFolderInput.value = res.customPath || res.currentPath || '';
+            updateFileBadges(res.filesDetected, res.details || {});
+        }
+    } catch (e) {
+        console.error('Error al consultar ruta de Hytale en Linux:', e);
+    }
+}
+
+async function performLinuxPathSearch(pathValue) {
+    const p = (pathValue || (linuxFolderInput ? linuxFolderInput.value : '')).trim();
+    if (!p) {
+        showToast('Ingresa una ruta para buscar', true);
+        return;
+    }
+
+    if (linuxStatusSummary) {
+        linuxStatusSummary.textContent = '⏳ Buscando archivos recursivamente...';
+        linuxStatusSummary.style.color = '#38bdf8';
+    }
+
+    try {
+        const res = await fetch('/api/hytale-path', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: p })
+        }).then(r => r.json());
+
+        if (res.success) {
+            if (linuxFolderInput) linuxFolderInput.value = res.path;
+            updateFileBadges(res.filesDetected, res.details || {});
+            if (res.filesDetected) {
+                showToast('¡Archivos de Hytale localizados con éxito!');
+            } else {
+                showToast('Ruta guardada, pero faltan algunos archivos de Hytale', true);
+            }
+            await reloadAllData();
+        } else {
+            if (linuxStatusSummary) {
+                linuxStatusSummary.textContent = `❌ ${res.error}`;
+                linuxStatusSummary.style.color = '#ef4444';
+            }
+            showToast(res.error, true);
+        }
+    } catch (err) {
+        showToast('Error de conexión al buscar archivos', true);
+    }
+}
+
+if (btnLinuxScan) {
+    btnLinuxScan.addEventListener('click', () => performLinuxPathSearch());
+}
+
+if (linuxFolderInput) {
+    linuxFolderInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performLinuxPathSearch();
+        }
+    });
+}
+
+if (linuxDirPicker) {
+    linuxDirPicker.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            // El navegador no siempre provee ruta completa por seguridad, pero provee el nombre o relativo
+            const first = e.target.files[0];
+            const rel = first.webkitRelativePath || '';
+            const rootDirName = rel.split('/')[0];
+            showToast(`Carpeta seleccionada: ${rootDirName}. Buscando...`);
+            // Si el input tenía un path base, o si el usuario puede confirmar la ruta
+            performLinuxPathSearch();
+        }
+    });
+}
+
+async function reloadAllData() {
+    await loadVersions();
+    await loadData();
+    await loadNewsStatus();
+    await loadAvatarStatus();
+    await refreshTexturePresets();
+}
+
+checkLinuxHytaleStatus();
 init();
+
+

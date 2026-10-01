@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hytale - Main Menu Background Editor (Linux)</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header class="titlebar">
+        <div class="titlebar-left">
+            <span class="app-icon">🎮</span>
+            <span class="app-title">Hytale – Main Menu Background Editor</span>
+            <span style="font-size:0.75rem; background:rgba(99,102,241,0.25); color:#a5b4fc; padding:2px 8px; border-radius:10px; border:1px solid rgba(99,102,241,0.4); margin-left:6px; font-weight:600;">Linux</span>
+        </div>
+
+        <div class="header-controls">
+            <!-- Selector de Versión -->
+            <div class="control-group">
+                <span class="control-icon">📁</span>
+                <label for="version-select" style="font-size:0.85rem; font-weight:600; margin-right:4px;"
+                    data-i18n="versionLabel">Versión:</label>
+                <select id="version-select" class="lang-select"></select>
+            </div>
+
+            <!-- Selector de Idioma -->
+            <div class="control-group">
+                <span class="control-icon">🌐</span>
+                <select id="lang-select" class="lang-select">
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                    <option value="pt">Português</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-container single-panel">
+        <section class="main-editor">
+            <div id="editor-form" class="editor-form">
+                <div class="editor-header">
+                    <h2 data-i18n="editingBackground">Editor de Fondo</h2>
+                    <div class="header-actions">
+                        <button id="btn-open-folder" class="btn btn-secondary" data-i18n="openTexturesFolder">
+                            📁 Abrir Carpeta Texturas
+                        </button>
+                        <button id="btn-save-all" class="btn btn-success" data-i18n="saveChanges">💾 Guardar
+                            Cambios</button>
+                    </div>
+                </div>
+
+                <!-- Selector de Carpeta Hytale para Linux y Búsqueda de Archivos -->
+                <div class="card linux-hytale-card" style="margin-bottom: 20px; border-color: #6366f1; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);">
+                    <div class="card-header">
+                        <h3 style="display:flex; align-items:center; gap:8px;">
+                            <span>🐧</span> Carpeta de Instalación de Hytale
+                        </h3>
+                        <span style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#a5b4fc; padding:4px 10px; border-radius:12px; border:1px solid rgba(99,102,241,0.3); font-weight:600;">
+                            Linux
+                        </span>
+                    </div>
+                    <p class="help-text">
+                        Selecciona o introduce la carpeta donde tienes instalado Hytale. El programa buscará automáticamente los archivos necesarios para su funcionamiento (<code>MainMenuBackgrounds.json</code>, <code>BackgroundImages</code>, etc.).
+                    </p>
+
+                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 12px;">
+                        <input type="text" id="linux-folder-input" placeholder="Ej: ~/.local/share/Hytale o /home/usuario/Games/Hytale" style="flex:1; padding: 10px 14px; background: #090d11; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.9rem;">
+                        <input type="file" id="linux-dir-picker" webkitdirectory directory style="display:none;">
+                        <label for="linux-dir-picker" class="btn btn-secondary" style="cursor: pointer; white-space: nowrap; padding: 10px 16px;">
+                            📂 Examinar...
+                        </label>
+                        <button id="btn-linux-scan" class="btn btn-primary" style="white-space: nowrap; padding: 10px 18px;">
+                            🔍 Buscar Archivos
+                        </button>
+                    </div>
+
+                    <!-- Indicadores de archivos detectados -->
+                    <div id="linux-scan-status-box" style="margin-top: 14px; padding: 14px; background: rgba(9, 13, 17, 0.7); border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                            <span style="font-size:0.85rem; font-weight:600; color:#cbd5e1;">Archivos necesarios detectados:</span>
+                            <strong id="linux-status-summary" style="font-size:0.85rem; color:#10b981;">Buscando...</strong>
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; font-size: 0.8rem;">
+                            <div id="badge-json" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                                ⏳ MainMenuBackgrounds.json
+                            </div>
+                            <div id="badge-textures" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                                ⏳ Carpeta BackgroundImages
+                            </div>
+                            <div id="badge-news" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                                ⏳ NewsTilesCarousel.ui
+                            </div>
+                            <div id="badge-homepage" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                                ⏳ HomePage.ui
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <!-- Images & Interface Settings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 data-i18n="backgroundImagesTitle">🖼️ Imágenes del Fondo</h3>
+                            <label for="file-upload" class="btn btn-accent btn-sm" style="cursor:pointer;"
+                                data-i18n="importPng">
+                                ⬆️ Importar PNG
+                            </label>
+                            <input type="file" id="file-upload" accept=".png" style="display:none;">
+                        </div>
+                        <p class="help-text" data-i18n="pngHelpText">Solo se permiten archivos <code>.png</code>. Se
+                            copian automáticamente a <code>BackgroundImages</code> de la versión seleccionada.</p>
+
+                        <div class="form-group">
+                            <label for="img-name" data-i18n="mainImageLabel">Imagen Principal (Image):</label>
+                            <div class="input-with-btn">
+                                <input type="text" id="img-name" placeholder="Textures/BackgroundImages/MiFondo.png">
+                                <select id="select-img-preset" class="select-preset">
+                                    <option value="" data-i18n="selectFromFolder">-- Seleccionar --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="blurred-img-name" data-i18n="blurredImageLabel">Imagen Desenfocada
+                                (BlurredImage):</label>
+                            <div class="input-with-btn">
+                                <input type="text" id="blurred-img-name"
+                                     placeholder="Textures/BackgroundImages/MiFondoBlurred.png">
+                                <select id="select-blurred-preset" class="select-preset">
+                                    <option value="" data-i18n="selectFromFolder">-- Seleccionar --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Configuración de Noticias del Menú Principal -->
+                        <div class="news-config-box"
+                            style="margin-top: 20px; padding: 14px; background: rgba(30, 41, 59, 0.6); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <h4 style="margin:0 0 4px 0; font-size:0.95rem; color:#f8fafc;"
+                                        data-i18n="newsSectionTitle">📰 Tarjetas de Noticias (NewsTilesCarousel)</h4>
+                                    <p class="help-text" style="margin:0;" data-i18n="newsSectionHelp">Oculta o muestra
+                                        el panel de noticias transparente en la pantalla principal.</p>
+                                </div>
+                                <label class="switch"
+                                    style="position:relative; display:inline-block; width:50px; height:26px;">
+                                    <input type="checkbox" id="chk-news-visible" checked
+                                        style="opacity:0; width:0; height:0;">
+                                    <span class="slider"
+                                        style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#334155; transition:.3s; border-radius:26px;"></span>
+                                </label>
+                            </div>
+                            <div style="margin-top: 10px; font-size: 0.85rem; color: #94a3b8;">
+                                <span data-i18n="newsStatusText">Estado en configuración UI:</span>
+                                <strong id="news-status-label" style="color: #10b981; margin-left: 5px;">true
+                                    (Visible)</strong>
+                            </div>
+                        </div>
+
+                        <!-- Configuración del Personaje (AvatarPreview / HomePage.ui) -->
+                        <div class="news-config-box"
+                            style="margin-top: 14px; padding: 14px; background: rgba(30, 41, 59, 0.6); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <h4 style="margin:0 0 4px 0; font-size:0.95rem; color:#f8fafc;"
+                                        data-i18n="avatarSectionTitle">🧍 Personaje del Menú (AvatarPreview)</h4>
+                                    <p class="help-text" style="margin:0;" data-i18n="avatarSectionHelp">Oculta o
+                                        mueve el personaje en el menú principal (HomePage.ui).</p>
+                                </div>
+                                <label class="switch"
+                                    style="position:relative; display:inline-block; width:50px; height:26px;">
+                                    <input type="checkbox" id="chk-avatar-visible" checked
+                                        style="opacity:0; width:0; height:0;">
+                                    <span class="slider"
+                                        style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#334155; transition:.3s; border-radius:26px;"></span>
+                                </label>
+                            </div>
+                            <!-- Controles de posición -->
+                            <div id="avatar-position-controls"
+                                style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div>
+                                    <label style="font-size:0.8rem; color:#94a3b8; display:block; margin-bottom:4px;"
+                                        data-i18n="avatarPosTop">Posición Vertical (Top):</label>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <input type="range" id="avatar-top" min="-200" max="800" value="320"
+                                            style="flex:1; accent-color:#6366f1;">
+                                        <input type="number" id="avatar-top-num" value="320" min="-200" max="800"
+                                            style="width:64px; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:5px; padding:4px; font-size:0.85rem;">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.8rem; color:#94a3b8; display:block; margin-bottom:4px;"
+                                        data-i18n="avatarPosLeft">Posición Horizontal (Left):</label>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <input type="range" id="avatar-left" min="-400" max="1200" value="0"
+                                            style="flex:1; accent-color:#6366f1;">
+                                        <input type="number" id="avatar-left-num" value="0" min="-400" max="1200"
+                                            style="width:64px; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:5px; padding:4px; font-size:0.85rem;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:12px;">
+                                <button id="btn-apply-avatar" class="btn btn-success btn-sm" style="flex:2;"
+                                    data-i18n="avatarApply">✅ Aplicar Posición del Personaje</button>
+                                <button id="btn-reset-avatar" class="btn btn-secondary btn-sm" style="flex:1;"
+                                    data-i18n="avatarReset">↺ Por Defecto</button>
+                            </div>
+                            <div style="margin-top: 10px; font-size: 0.85rem; color: #94a3b8;">
+                                <span data-i18n="avatarStatusText">Estado:</span>
+                                <strong id="avatar-status-label" style="color: #10b981; margin-left: 5px;">Visible (Top:
+                                    320, Left: 0)</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VFX -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 data-i18n="vfxTitle">✨ Efectos de Partículas (VFX)</h3>
+                            <div class="vfx-header-actions">
+                                <a href="https://orbishytale.com/es/effects/" target="_blank"
+                                    class="btn btn-info btn-sm" data-i18n="vfxGuideLink">
+                                    🌐 Guía OrbisHytale
+                                </a>
+                                <button id="btn-apply-vfx" class="btn btn-success btn-sm" data-i18n="applyVfxChanges">✅
+                                    Aplicar Partículas</button>
+                                <button id="btn-add-vfx" class="btn btn-primary btn-sm" data-i18n="addParticle">+
+                                    Agregar Partícula</button>
+                            </div>
+                        </div>
+                        <p class="help-text" data-i18n="vfxHelpText">Añade efectos visuales 3D especificando nombre,
+                            posición y escala.</p>
+                        <div class="vfx-list" id="vfx-list"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="client.js"></script>
+</body>
+
+</html>

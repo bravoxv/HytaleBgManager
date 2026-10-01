@@ -18,12 +18,32 @@ const publicPath = fs.existsSync(path.join(__dirname, 'public'))
 app.use(express.static(publicPath));
 
 app.get('/', (req, res) => {
-  const indexPath = path.join(publicPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
+  const isLinux = process.platform === 'linux' || process.argv.includes('--linux');
+  const fileToServe = isLinux ? 'linux.html' : 'index.html';
+  const filePath = path.join(publicPath, fileToServe);
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
   } else {
-    res.status(404).send('index.html no encontrado');
+    const indexPath = path.join(publicPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).send('index.html no encontrado');
+    }
   }
+});
+
+app.get('/linux', (req, res) => {
+  const linuxPath = path.join(publicPath, 'linux.html');
+  if (fs.existsSync(linuxPath)) {
+    res.sendFile(linuxPath);
+  } else {
+    res.sendFile(path.join(publicPath, 'index.html'));
+  }
+});
+
+app.get('/windows', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // Endpoint para cerrar el proceso del servidor limpiamente cuando se cierra la ventana del navegador
@@ -36,7 +56,100 @@ app.post('/api/shutdown', (req, res) => {
 
 const os = require('os');
 
+function getConfigFile() {
+  return path.join(__dirname, 'config.json');
+}
+
+function loadConfig() {
+  try {
+    const cfgPath = getConfigFile();
+    if (fs.existsSync(cfgPath)) {
+      return JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Error al leer config.json:', e);
+  }
+  return {};
+}
+
+function saveConfig(data) {
+  try {
+    const cfgPath = getConfigFile();
+    const current = loadConfig();
+    const merged = { ...current, ...data };
+    fs.writeFileSync(cfgPath, JSON.stringify(merged, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    console.error('Error al guardar config.json:', e);
+    return false;
+  }
+}
+
+// Búsqueda recursiva para encontrar los archivos requeridos de Hytale
+function findHytaleFilesRecursively(startDir, maxDepth = 6) {
+  if (!fs.existsSync(startDir)) return null;
+
+  const results = {
+    jsonPath: null,
+    texturesDir: null,
+    newsCarouselPath: null,
+    homePagePath: null,
+    installBase: null,
+  };
+
+  function traverse(currentDir, currentDepth) {
+    if (currentDepth > maxDepth) return;
+    let entries = [];
+    try {
+      entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    } catch (e) {
+      return;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(currentDir, entry.name);
+      if (entry.isFile()) {
+        if (entry.name === 'MainMenuBackgrounds.json' && !results.jsonPath) {
+          results.jsonPath = fullPath;
+        } else if (entry.name === 'NewsTilesCarousel.ui' && !results.newsCarouselPath) {
+          results.newsCarouselPath = fullPath;
+        } else if (entry.name === 'HomePage.ui' && !results.homePagePath) {
+          results.homePagePath = fullPath;
+        }
+      } else if (entry.isDirectory()) {
+        if (entry.name === 'BackgroundImages' && !results.texturesDir) {
+          results.texturesDir = fullPath;
+        }
+        traverse(fullPath, currentDepth + 1);
+      }
+    }
+  }
+
+  traverse(startDir, 0);
+
+  // Si encontramos al menos MainMenuBackgrounds.json o BackgroundImages
+  if (results.jsonPath) {
+    // Si no encontró texturesDir pero tenemos jsonPath, buscar la ruta relativa común
+    if (!results.texturesDir) {
+      const gameDir = path.dirname(results.jsonPath); // .../Client/Data/Game
+      const clientDir = path.dirname(path.dirname(gameDir)); // .../Client
+      const candidateTextures = path.join(clientDir, 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
+      if (fs.existsSync(candidateTextures)) {
+        results.texturesDir = candidateTextures;
+      }
+    }
+    return results;
+  }
+
+  return null;
+}
+
 function getHytaleInstallBase() {
+  const config = loadConfig();
+  if (config.customHytalePath && fs.existsSync(config.customHytalePath)) {
+    return config.customHytalePath;
+  }
+
   const home = os.homedir();
   if (process.platform === 'win32') {
     return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Hytale', 'install');
@@ -46,16 +159,19 @@ function getHytaleInstallBase() {
     // Linux y otros UNIX: ~/.local/share/Hytale/install o ~/.config/Hytale/install
     const localShare = path.join(home, '.local', 'share', 'Hytale', 'install');
     if (fs.existsSync(localShare)) return localShare;
-    return path.join(home, '.config', 'Hytale', 'install');
+    const localConfig = path.join(home, '.config', 'Hytale', 'install');
+    if (fs.existsSync(localConfig)) return localConfig;
+    const localShareBase = path.join(home, '.local', 'share', 'Hytale');
+    if (fs.existsSync(localShareBase)) return localShareBase;
+    return localShare;
   }
 }
 
-const INSTALL_BASE_DIR = getHytaleInstallBase();
-
 function getVersions() {
-  if (!fs.existsSync(INSTALL_BASE_DIR)) return ['pre-release'];
+  const installBase = getHytaleInstallBase();
+  if (!fs.existsSync(installBase)) return ['pre-release'];
   try {
-    const dirs = fs.readdirSync(INSTALL_BASE_DIR, { withFileTypes: true })
+    const dirs = fs.readdirSync(installBase, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory())
       .map(dirent => dirent.name);
     return dirs.length > 0 ? dirs : ['pre-release'];
@@ -66,10 +182,24 @@ function getVersions() {
 
 function getPathsForVersion(ver) {
   const safeVer = ver || 'pre-release';
-  const jsonPath = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
-  const texturesDir = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
-  const newsCarouselPath = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui');
-  const homePagePath = path.join(INSTALL_BASE_DIR, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui');
+  const installBase = getHytaleInstallBase();
+
+  let jsonPath = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json');
+  let texturesDir = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages');
+  let newsCarouselPath = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui');
+  let homePagePath = path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui');
+
+  // Si no existen en la ruta estándar, realizar búsqueda recursiva a partir de installBase
+  if (!fs.existsSync(jsonPath) && fs.existsSync(installBase)) {
+    const recursiveResults = findHytaleFilesRecursively(installBase);
+    if (recursiveResults && recursiveResults.jsonPath) {
+      if (recursiveResults.jsonPath) jsonPath = recursiveResults.jsonPath;
+      if (recursiveResults.texturesDir) texturesDir = recursiveResults.texturesDir;
+      if (recursiveResults.newsCarouselPath) newsCarouselPath = recursiveResults.newsCarouselPath;
+      if (recursiveResults.homePagePath) homePagePath = recursiveResults.homePagePath;
+    }
+  }
+
   return { jsonPath, texturesDir, newsCarouselPath, homePagePath };
 }
 
@@ -430,8 +560,74 @@ app.post('/api/open-folder', (req, res) => {
   const version = req.query.version || 'pre-release';
   const { texturesDir } = getPathsForVersion(version);
   if (!fs.existsSync(texturesDir)) fs.mkdirSync(texturesDir, { recursive: true });
-  exec(`explorer "${texturesDir}"`);
+
+  const openCmd = process.platform === 'win32' ? `explorer "${texturesDir}"` :
+                  process.platform === 'darwin' ? `open "${texturesDir}"` :
+                  `xdg-open "${texturesDir}"`;
+
+  exec(openCmd, (err) => {
+    if (err) console.error('Error al abrir carpeta:', err);
+  });
   res.json({ success: true });
+});
+
+// Obtener la ruta actual configurada de Hytale y estado de archivos
+app.get('/api/hytale-path', (req, res) => {
+  const currentPath = getHytaleInstallBase();
+  const cfg = loadConfig();
+  const found = findHytaleFilesRecursively(currentPath);
+
+  res.json({
+    success: true,
+    currentPath,
+    customPath: cfg.customHytalePath || null,
+    isLinux: process.platform === 'linux',
+    exists: fs.existsSync(currentPath),
+    filesDetected: !!(found && found.jsonPath),
+    details: found
+  });
+});
+
+// Guardar nueva ruta de Hytale y buscar archivos
+app.post('/api/hytale-path', (req, res) => {
+  let targetPath = (req.body.path || '').trim();
+  if (!targetPath) {
+    return res.json({ success: false, error: 'La ruta no puede estar vacía' });
+  }
+
+  // Expandir tilde en Linux / macOS
+  if (targetPath.startsWith('~/') || targetPath === '~') {
+    targetPath = path.join(os.homedir(), targetPath.slice(targetPath === '~' ? 1 : 2));
+  }
+
+  if (!fs.existsSync(targetPath)) {
+    return res.json({ success: false, error: 'La carpeta especificada no existe en el sistema' });
+  }
+
+  // Buscar archivos dentro de la ruta
+  const found = findHytaleFilesRecursively(targetPath);
+  saveConfig({ customHytalePath: targetPath });
+
+  res.json({
+    success: true,
+    path: targetPath,
+    filesDetected: !!(found && found.jsonPath),
+    details: found || {},
+    versions: getVersions()
+  });
+});
+
+// Abrir la interfaz GUI de Linux bajo demanda
+app.post('/api/open-linux-gui', (req, res) => {
+  const guiScript = path.join(__dirname, 'linux_gui.py');
+  if (fs.existsSync(guiScript)) {
+    exec('python3 linux_gui.py', (err) => {
+      if (err) console.error('Error al ejecutar linux_gui.py:', err);
+    });
+    res.json({ success: true, message: 'GUI iniciada' });
+  } else {
+    res.json({ success: false, error: 'linux_gui.py no encontrado' });
+  }
 });
 
 // Upload PNG image

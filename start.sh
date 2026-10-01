@@ -45,6 +45,6 @@ EOF
 fi
 
 # Iniciar servidor Node.js en segundo plano desvinculado de la terminal (nohup)
-nohup node server.js >/dev/null 2>&1 &
+nohup node server.js --linux >/dev/null 2>&1 &
 
-echo "🚀 Hytale BG Manager iniciado en segundo plano."
+echo "🚀 Hytale BG Manager iniciado para Linux."
