@@ -1,8 +1,10 @@
 {
   "name": "hytale-bg-manager",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Editor visual de fondos del menú principal de Hytale",
   "main": "main.js",
+  "commit": "3ed776b49f172bba94649c0ae85625985ac8ad9f",
+  "githubRepo": "bravoxv/HytaleBgManager",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --inspect"

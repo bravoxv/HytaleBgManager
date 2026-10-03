@@ -34,7 +34,9 @@ const translations = {
         toastUpdateSynced: "⚡ ¡Actualización de Hytale detectada! Personalizaciones resincronizadas automáticamente.",
         confirmClearTitle: "¿Eliminar la ruta guardada?",
         confirmClearMsg: "Se eliminará la carpeta de instalación de Hytale configurada. Tendrás que volver a seleccionarla.\n\n¿Deseas continuar?",
-        toastClearPath: "Ruta eliminada. Selecciona una nueva carpeta de Hytale."
+        toastClearPath: "Ruta eliminada. Selecciona una nueva carpeta de Hytale.",
+        updateAvailable: "⬆️ Actualización disponible",
+        updateDownload: "Descargar ZIP"
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -66,7 +68,9 @@ const translations = {
         toastUpdateSynced: "⚡ Hytale update detected! Customizations re-applied automatically.",
         confirmClearTitle: "Remove saved path?",
         confirmClearMsg: "The configured Hytale installation folder will be removed. You will need to select it again.\n\nDo you want to continue?",
-        toastClearPath: "Path removed. Select your Hytale installation folder again."
+        toastClearPath: "Path removed. Select your Hytale installation folder again.",
+        updateAvailable: "⬆️ Update available",
+        updateDownload: "Download ZIP"
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -98,7 +102,9 @@ const translations = {
         toastUpdateSynced: "⚡ Atualização do Hytale detectada! Personalizações reaplicadas automaticamente.",
         confirmClearTitle: "Remover caminho salvo?",
         confirmClearMsg: "A pasta de instalação do Hytale configurada será removida. Você precisará selecioná-la novamente.\n\nDeseja continuar?",
-        toastClearPath: "Caminho removido. Selecione a pasta de instalação do Hytale novamente."
+        toastClearPath: "Caminho removido. Selecione a pasta de instalação do Hytale novamente.",
+        updateAvailable: "⬆️ Atualização disponível",
+        updateDownload: "Baixar ZIP"
     }
 };
 
@@ -172,6 +178,58 @@ async function checkGameVersionUpdate() {
     }
 }
 
+// Consulta GitHub en background y muestra la banda de actualización si hay versión nueva.
+// No bloquea la carga de la app — se llama sin await al final de init().
+async function checkAppUpdate() {
+    try {
+        const res = await fetch('/api/check-app-update').then(r => r.json()).catch(() => null);
+        if (!res || !res.success || !res.hasUpdate) return;
+
+        const banner   = document.getElementById('update-banner');
+        const title    = document.getElementById('update-banner-title');
+        const desc     = document.getElementById('update-banner-desc');
+        const link     = document.getElementById('update-banner-link');
+        const btnLabel = document.getElementById('update-btn-label');
+        const closeBtn = document.getElementById('update-banner-close');
+        if (!banner) return;
+
+        // Texto según idioma
+        const t = translations[currentLang] || translations['es'];
+        const titleText = t.updateAvailable  || 'Actualización disponible';
+        const btnText   = t.updateDownload   || 'Descargar';
+
+        if (title)    title.textContent = titleText;
+        if (btnLabel) btnLabel.textContent = btnText;
+
+        // Descripción: mensaje del commit + hash corto
+        let descText = '';
+        if (res.commitMessage) descText += res.commitMessage;
+        if (res.latestShort)   descText += ` (${res.latestShort})`;
+        if (res.commitDate) {
+            const d = new Date(res.commitDate);
+            descText += ' — ' + d.toLocaleDateString();
+        }
+        if (desc) desc.textContent = descText;
+
+        // Link al ZIP del repo en GitHub
+        if (link) link.href = res.downloadUrl || res.githubUrl || '#';
+
+        // Mostrar banda con animación
+        banner.classList.remove('hidden');
+
+        // Botón cerrar
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                banner.style.animation = 'bannerSlideDown 0.25s ease reverse forwards';
+                setTimeout(() => banner.classList.add('hidden'), 250);
+            }, { once: true });
+        }
+    } catch (e) {
+        // Silencioso: si no hay internet o falla GitHub, no mostrar nada
+        console.log('[Update] No se pudo verificar actualizaciones:', e.message);
+    }
+}
+
 async function init() {
     fetch('/api/ping').catch(() => {});
     await loadVersions();
@@ -181,6 +239,7 @@ async function init() {
     await loadAvatarStatus();
     await refreshTexturePresets();
     updateLanguageUI();
+    checkAppUpdate(); // No bloqueante — corre en background
 
     versionSelect.addEventListener('change', async e => {
         currentVersion = e.target.value;

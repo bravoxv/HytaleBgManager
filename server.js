@@ -1182,5 +1182,79 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.json({ success: true, fileName: req.file.filename });
 });
 
+// ── Auto-actualizacion desde GitHub ──────────────────────────────────────────
+// Lee el commit local desde package.json (campo "commit") y lo compara con
+// el HEAD actual del repo en GitHub. No requiere git instalado en el usuario.
+const _pkg = (() => {
+  try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')); }
+  catch (e) { return {}; }
+})();
 
+const GITHUB_REPO    = _pkg.githubRepo || 'bravoxv/HytaleBgManager';
+const LOCAL_COMMIT   = _pkg.commit     || null;
+const APP_VERSION    = _pkg.version    || '?';
+const GITHUB_URL     = `https://github.com/${GITHUB_REPO}`;
 
+app.get('/api/check-app-update', (req, res) => {
+  const https = require('https');
+
+  const options = {
+    hostname: 'api.github.com',
+    path: `/repos/${GITHUB_REPO}/commits/main`,
+    method: 'GET',
+    headers: {
+      'User-Agent': 'HytaleBgManager-UpdateCheck',
+      'Accept':     'application/vnd.github.v3+json'
+    },
+    timeout: 8000
+  };
+
+  const request = https.request(options, (r) => {
+    let data = '';
+    r.on('data', c => { data += c; });
+    r.on('end', () => {
+      try {
+        const body = JSON.parse(data);
+        if (r.statusCode !== 200 || !body.sha) {
+          return res.json({
+            success: false,
+            error: 'GitHub respondio con status ' + r.statusCode,
+            currentVersion: APP_VERSION,
+            currentCommit: LOCAL_COMMIT
+          });
+        }
+        const latestCommit  = body.sha;
+        const latestShort   = latestCommit.substring(0, 7);
+        const localShort    = LOCAL_COMMIT ? LOCAL_COMMIT.substring(0, 7) : null;
+        const hasUpdate     = LOCAL_COMMIT ? latestCommit !== LOCAL_COMMIT : false;
+        const commitMessage = body.commit && body.commit.message ? body.commit.message.split('\n')[0] : null;
+        const commitDate    = body.commit && body.commit.author  ? body.commit.author.date : null;
+
+        res.json({
+          success:        true,
+          hasUpdate,
+          currentVersion: APP_VERSION,
+          currentCommit:  LOCAL_COMMIT,
+          currentShort:   localShort,
+          latestCommit,
+          latestShort,
+          commitMessage,
+          commitDate,
+          githubUrl:   GITHUB_URL,
+          downloadUrl: `${GITHUB_URL}/archive/refs/heads/main.zip`
+        });
+      } catch (e) {
+        res.json({ success: false, error: 'Respuesta invalida de GitHub', currentVersion: APP_VERSION });
+      }
+    });
+  });
+
+  request.on('error', (err) => {
+    res.json({ success: false, error: err.message, currentVersion: APP_VERSION, currentCommit: LOCAL_COMMIT });
+  });
+  request.on('timeout', () => {
+    request.destroy();
+    res.json({ success: false, error: 'Timeout al conectar con GitHub', currentVersion: APP_VERSION });
+  });
+  request.end();
+});
