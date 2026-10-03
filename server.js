@@ -1185,76 +1185,202 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 // ── Auto-actualizacion desde GitHub ──────────────────────────────────────────
 // Lee el commit local desde package.json (campo "commit") y lo compara con
 // el HEAD actual del repo en GitHub. No requiere git instalado en el usuario.
-const _pkg = (() => {
+
+// Archivos/directorios que nunca se tocan al actualizar (datos del usuario o generados)
+const UPDATE_SKIP_PATHS = new Set([
+  'config.json', 'backups', 'node_modules', 'package-lock.json', '.git', '.gitignore'
+]);
+
+function githubRequest(apiPath) {
+  return new Promise((resolve, reject) => {
+    const https = require('https');
+    const options = {
+      hostname: 'api.github.com',
+      path: apiPath,
+      method: 'GET',
+      headers: { 'User-Agent': 'HytaleBgManager-UpdateCheck', 'Accept': 'application/vnd.github.v3+json' },
+      timeout: 12000
+    };
+    const req = https.request(options, (r) => {
+      let data = '';
+      r.on('data', c => { data += c; });
+      r.on('end', () => {
+        try { resolve({ status: r.statusCode, body: JSON.parse(data) }); }
+        catch (e) { reject(new Error('Respuesta JSON invalida')); }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout GitHub')); });
+    req.end();
+  });
+}
+
+function downloadRaw(rawUrl) {
+  return new Promise((resolve, reject) => {
+    const https = require('https');
+    const http  = require('http');
+    const lib   = rawUrl.startsWith('https') ? https : http;
+    lib.get(rawUrl, { headers: { 'User-Agent': 'HytaleBgManager-UpdateCheck' }, timeout: 15000 }, (r) => {
+      if (r.statusCode === 301 || r.statusCode === 302) {
+        return downloadRaw(r.headers.location).then(resolve).catch(reject);
+      }
+      const chunks = [];
+      r.on('data', c => chunks.push(c));
+      r.on('end', () => resolve(Buffer.concat(chunks)));
+    }).on('error', reject).on('timeout', () => reject(new Error('Timeout descargando archivo')));
+  });
+}
+
+// Recarga el package.json en caliente para reflejar cambios tras la actualización
+function reloadPkg() {
   try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')); }
   catch (e) { return {}; }
-})();
+}
 
-const GITHUB_REPO    = _pkg.githubRepo || 'bravoxv/HytaleBgManager';
-const LOCAL_COMMIT   = _pkg.commit     || null;
-const APP_VERSION    = _pkg.version    || '?';
-const GITHUB_URL     = `https://github.com/${GITHUB_REPO}`;
+// Devuelve el commit local leyendo el package.json del disco (no el valor cacheado al inicio)
+function getLocalCommit() { return reloadPkg().commit || null; }
+function getGithubRepo()  {
+  const p = reloadPkg();
+  return p.githubRepo || 'bravoxv/HytaleBgManager';
+}
+function getAppVersion()  { return reloadPkg().version || '?'; }
+function getGithubUrl()   { return `https://github.com/${getGithubRepo()}`; }
 
-app.get('/api/check-app-update', (req, res) => {
-  const https = require('https');
+// GET /api/check-app-update
+// Compara el commit local con el HEAD de main en GitHub.
+app.get('/api/check-app-update', async (req, res) => {
+  try {
+    const localCommit = getLocalCommit();
+    const repo        = getGithubRepo();
+    const { status, body } = await githubRequest(`/repos/${repo}/commits/main`);
 
-  const options = {
-    hostname: 'api.github.com',
-    path: `/repos/${GITHUB_REPO}/commits/main`,
-    method: 'GET',
-    headers: {
-      'User-Agent': 'HytaleBgManager-UpdateCheck',
-      'Accept':     'application/vnd.github.v3+json'
-    },
-    timeout: 8000
-  };
+    if (status !== 200 || !body.sha) {
+      return res.json({ success: false, error: 'GitHub respondio ' + status, currentCommit: localCommit });
+    }
 
-  const request = https.request(options, (r) => {
-    let data = '';
-    r.on('data', c => { data += c; });
-    r.on('end', () => {
+    const latestCommit  = body.sha;
+    const hasUpdate     = localCommit ? latestCommit !== localCommit : false;
+    const commitMessage = body.commit?.message ? body.commit.message.split('\n')[0] : null;
+    const commitDate    = body.commit?.author?.date || null;
+
+    // Si hay update, obtener cuántos archivos cambiaron (para info al usuario)
+    let changedFilesCount = null;
+    if (hasUpdate && localCommit) {
       try {
-        const body = JSON.parse(data);
-        if (r.statusCode !== 200 || !body.sha) {
-          return res.json({
-            success: false,
-            error: 'GitHub respondio con status ' + r.statusCode,
-            currentVersion: APP_VERSION,
-            currentCommit: LOCAL_COMMIT
-          });
+        const cmp = await githubRequest(`/repos/${repo}/compare/${localCommit}...${latestCommit}`);
+        if (cmp.status === 200 && Array.isArray(cmp.body.files)) {
+          changedFilesCount = cmp.body.files.filter(f => {
+            const top = f.filename.split('/')[0];
+            return !UPDATE_SKIP_PATHS.has(top) && !UPDATE_SKIP_PATHS.has(f.filename);
+          }).length;
         }
-        const latestCommit  = body.sha;
-        const latestShort   = latestCommit.substring(0, 7);
-        const localShort    = LOCAL_COMMIT ? LOCAL_COMMIT.substring(0, 7) : null;
-        const hasUpdate     = LOCAL_COMMIT ? latestCommit !== LOCAL_COMMIT : false;
-        const commitMessage = body.commit && body.commit.message ? body.commit.message.split('\n')[0] : null;
-        const commitDate    = body.commit && body.commit.author  ? body.commit.author.date : null;
+      } catch (e) { /* no crítico */ }
+    }
 
-        res.json({
-          success:        true,
-          hasUpdate,
-          currentVersion: APP_VERSION,
-          currentCommit:  LOCAL_COMMIT,
-          currentShort:   localShort,
-          latestCommit,
-          latestShort,
-          commitMessage,
-          commitDate,
-          githubUrl:   GITHUB_URL,
-          downloadUrl: `${GITHUB_URL}/archive/refs/heads/main.zip`
-        });
-      } catch (e) {
-        res.json({ success: false, error: 'Respuesta invalida de GitHub', currentVersion: APP_VERSION });
-      }
+    res.json({
+      success: true,
+      hasUpdate,
+      currentCommit:  localCommit,
+      currentShort:   localCommit ? localCommit.substring(0, 7) : null,
+      latestCommit,
+      latestShort:    latestCommit.substring(0, 7),
+      commitMessage,
+      commitDate,
+      changedFilesCount,
+      githubUrl: getGithubUrl()
     });
-  });
+  } catch (err) {
+    res.json({ success: false, error: err.message, currentCommit: getLocalCommit() });
+  }
+});
 
-  request.on('error', (err) => {
-    res.json({ success: false, error: err.message, currentVersion: APP_VERSION, currentCommit: LOCAL_COMMIT });
-  });
-  request.on('timeout', () => {
-    request.destroy();
-    res.json({ success: false, error: 'Timeout al conectar con GitHub', currentVersion: APP_VERSION });
-  });
-  request.end();
+// POST /api/apply-update
+// Descarga solo los archivos que cambiaron usando GitHub Compare API y los escribe en disco.
+// Al terminar actualiza el campo "commit" en package.json.
+app.post('/api/apply-update', async (req, res) => {
+  try {
+    const localCommit = getLocalCommit();
+    const repo        = getGithubRepo();
+
+    if (!localCommit) {
+      return res.json({ success: false, error: 'No se encontro el commit local en package.json' });
+    }
+
+    // 1. Obtener commit más reciente de GitHub
+    const headRes = await githubRequest(`/repos/${repo}/commits/main`);
+    if (headRes.status !== 200 || !headRes.body.sha) {
+      return res.json({ success: false, error: 'No se pudo obtener el commit de GitHub' });
+    }
+    const latestCommit = headRes.body.sha;
+
+    if (latestCommit === localCommit) {
+      return res.json({ success: true, alreadyUpToDate: true, message: 'Ya estas en la ultima version' });
+    }
+
+    // 2. Obtener la lista de archivos que cambiaron entre commits
+    const cmpRes = await githubRequest(`/repos/${repo}/compare/${localCommit}...${latestCommit}`);
+    if (cmpRes.status !== 200 || !Array.isArray(cmpRes.body.files)) {
+      return res.json({ success: false, error: 'No se pudo obtener la lista de archivos cambiados' });
+    }
+
+    const changedFiles = cmpRes.body.files.filter(f => {
+      // Ignorar archivos del usuario y generados
+      const top = f.filename.split('/')[0];
+      if (UPDATE_SKIP_PATHS.has(top) || UPDATE_SKIP_PATHS.has(f.filename)) return false;
+      // Ignorar archivos eliminados (status: 'removed') — no los borramos automáticamente por seguridad
+      if (f.status === 'removed') return false;
+      return true;
+    });
+
+    if (changedFiles.length === 0) {
+      // Solo cambiaron archivos ignorados (config, etc.) — igual actualizamos el commit
+      const pkg = reloadPkg();
+      pkg.commit = latestCommit;
+      fs.writeFileSync(path.join(__dirname, 'package.json'), JSON.stringify(pkg, null, 2), 'utf8');
+      return res.json({ success: true, applied: [], skipped: [], newCommit: latestCommit });
+    }
+
+    // 3. Descargar y escribir cada archivo cambiado
+    const applied = [];
+    const failed  = [];
+
+    for (const file of changedFiles) {
+      try {
+        const rawUrl = file.raw_url;
+        if (!rawUrl) { failed.push({ file: file.filename, error: 'Sin raw_url' }); continue; }
+
+        const content  = await downloadRaw(rawUrl);
+        const destPath = path.join(__dirname, ...file.filename.split('/'));
+        const destDir  = path.dirname(destPath);
+
+        if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+        fs.writeFileSync(destPath, content);
+        applied.push(file.filename);
+        console.log(`[Update] Actualizado: ${file.filename}`);
+      } catch (e) {
+        failed.push({ file: file.filename, error: e.message });
+        console.error(`[Update] Error en ${file.filename}:`, e.message);
+      }
+    }
+
+    // 4. Actualizar el commit en package.json para que el detector no vuelva a disparar
+    const pkg = reloadPkg();
+    pkg.commit = latestCommit;
+    fs.writeFileSync(path.join(__dirname, 'package.json'), JSON.stringify(pkg, null, 2), 'utf8');
+
+    console.log(`[Update] Completado. Aplicados: ${applied.length}, Fallidos: ${failed.length}`);
+
+    res.json({
+      success: true,
+      applied,
+      failed,
+      newCommit:  latestCommit,
+      newShort:   latestCommit.substring(0, 7),
+      needsRestart: applied.some(f => f === 'server.js' || f === 'main.js')
+    });
+
+  } catch (err) {
+    console.error('[Update] Error general:', err);
+    res.json({ success: false, error: err.message });
+  }
 });

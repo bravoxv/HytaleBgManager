@@ -36,6 +36,10 @@ const translations = {
         confirmClearMsg: "Se eliminará la carpeta de instalación de Hytale configurada. Tendrás que volver a seleccionarla.\n\n¿Deseas continuar?",
         toastClearPath: "Ruta eliminada. Selecciona una nueva carpeta de Hytale.",
         updateAvailable: "⬆️ Actualización disponible",
+        updateApply: "Aplicar actualización",
+        updateApplying: "Aplicando...",
+        updateDone: "Actualización aplicada",
+        updateAlreadyLatest: "Ya tenías la última versión.",
         updateDownload: "Descargar ZIP"
     },
     en: {
@@ -70,6 +74,10 @@ const translations = {
         confirmClearMsg: "The configured Hytale installation folder will be removed. You will need to select it again.\n\nDo you want to continue?",
         toastClearPath: "Path removed. Select your Hytale installation folder again.",
         updateAvailable: "⬆️ Update available",
+        updateApply: "Apply update",
+        updateApplying: "Applying...",
+        updateDone: "Update applied",
+        updateAlreadyLatest: "You already have the latest version.",
         updateDownload: "Download ZIP"
     },
     pt: {
@@ -104,6 +112,10 @@ const translations = {
         confirmClearMsg: "A pasta de instalação do Hytale configurada será removida. Você precisará selecioná-la novamente.\n\nDeseja continuar?",
         toastClearPath: "Caminho removido. Selecione a pasta de instalação do Hytale novamente.",
         updateAvailable: "⬆️ Atualização disponível",
+        updateApply: "Aplicar atualização",
+        updateApplying: "Aplicando...",
+        updateDone: "Atualização aplicada",
+        updateAlreadyLatest: "Você já tem a última versão.",
         updateDownload: "Baixar ZIP"
     }
 };
@@ -193,26 +205,76 @@ async function checkAppUpdate() {
         const closeBtn = document.getElementById('update-banner-close');
         if (!banner) return;
 
-        // Texto según idioma
         const t = translations[currentLang] || translations['es'];
-        const titleText = t.updateAvailable  || 'Actualización disponible';
-        const btnText   = t.updateDownload   || 'Descargar';
+        if (title)    title.textContent = t.updateAvailable || '⬆️ Actualización disponible';
+        if (btnLabel) btnLabel.textContent = t.updateApply || 'Aplicar actualización';
 
-        if (title)    title.textContent = titleText;
-        if (btnLabel) btnLabel.textContent = btnText;
-
-        // Descripción: mensaje del commit + hash corto
+        // Descripción: archivos cambiados + mensaje + fecha
         let descText = '';
+        if (res.changedFilesCount != null) descText += `${res.changedFilesCount} archivo(s) cambiado(s). `;
         if (res.commitMessage) descText += res.commitMessage;
         if (res.latestShort)   descText += ` (${res.latestShort})`;
-        if (res.commitDate) {
-            const d = new Date(res.commitDate);
-            descText += ' — ' + d.toLocaleDateString();
-        }
         if (desc) desc.textContent = descText;
 
-        // Link al ZIP del repo en GitHub
-        if (link) link.href = res.downloadUrl || res.githubUrl || '#';
+        // Quitar el href — el botón ahora aplica la actualización in-place
+        if (link) {
+            link.removeAttribute('href');
+            link.style.cursor = 'pointer';
+
+            link.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (link.dataset.applying === '1') return;
+                link.dataset.applying = '1';
+                if (btnLabel) btnLabel.textContent = t.updateApplying || 'Aplicando...';
+                link.style.opacity = '0.7';
+                if (desc) desc.textContent = 'Descargando y aplicando archivos...';
+
+                try {
+                    const upRes = await fetch('/api/apply-update', { method: 'POST' }).then(r => r.json());
+
+                    if (!upRes.success) {
+                        if (desc) desc.textContent = 'Error: ' + upRes.error;
+                        if (btnLabel) btnLabel.textContent = t.updateApply || 'Reintentar';
+                        link.style.opacity = '1';
+                        delete link.dataset.applying;
+                        return;
+                    }
+
+                    // Éxito
+                    const count = upRes.applied ? upRes.applied.length : 0;
+                    if (title) {
+                        title.textContent = '✅ ' + (t.updateDone || 'Actualización aplicada');
+                        title.style.color = '#34d399';
+                    }
+
+                    if (upRes.alreadyUpToDate) {
+                        if (desc) desc.textContent = t.updateAlreadyLatest || 'Ya tenías la última versión.';
+                        link.classList.add('hidden');
+                    } else if (upRes.needsRestart) {
+                        if (desc) desc.textContent = `${count} archivo(s) actualizado(s). Reinicia la app para aplicar los cambios.`;
+                        if (btnLabel) btnLabel.textContent = '🔄 Reiniciar';
+                        link.style.opacity = '1';
+                        // Al hacer click de nuevo, recargar la página (reinicia el servidor si es Electron)
+                        link.addEventListener('click', (e) => { e.preventDefault(); location.reload(); }, { once: true });
+                        delete link.dataset.applying;
+                    } else {
+                        if (desc) desc.textContent = `${count} archivo(s) actualizado(s) correctamente.`;
+                        link.classList.add('hidden');
+                        // Recargar los datos de la UI automáticamente
+                        setTimeout(async () => {
+                            await loadData();
+                            await loadNewsStatus();
+                            await loadAvatarStatus();
+                        }, 800);
+                    }
+                } catch (err) {
+                    if (desc) desc.textContent = 'Error de conexión al aplicar actualización.';
+                    if (btnLabel) btnLabel.textContent = t.updateApply || 'Reintentar';
+                    link.style.opacity = '1';
+                    delete link.dataset.applying;
+                }
+            }, { once: true });
+        }
 
         // Mostrar banda con animación
         banner.classList.remove('hidden');
@@ -225,10 +287,10 @@ async function checkAppUpdate() {
             }, { once: true });
         }
     } catch (e) {
-        // Silencioso: si no hay internet o falla GitHub, no mostrar nada
         console.log('[Update] No se pudo verificar actualizaciones:', e.message);
     }
 }
+
 
 async function init() {
     fetch('/api/ping').catch(() => {});
