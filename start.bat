@@ -51,7 +51,7 @@ if "%NODE_FOUND%"=="0" (
     ) else (
         :: 2. Descargar instalador oficial MSI via powershell
         echo Descargando instalador de Node.js...
-        powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi', 'node_installer.msi')"
+        powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://nodejs.org/dist/v22.12.0/node-v22.12.0-x64.msi', 'node_installer.msi')"
         if exist node_installer.msi (
             echo Instalando Node.js... Completa el asistente en pantalla.
             msiexec /i node_installer.msi

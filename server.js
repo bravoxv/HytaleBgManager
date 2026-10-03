@@ -9,16 +9,70 @@ const multer = require('multer');
 const app = express();
 const PORT = 4785;
 
+// Resultado del chequeo de versión al arrancar (accesible via /api/startup-status)
+let _startupCheckResult = null;
+
+// Chequeo de versión al arrancar el servidor: se llama una sola vez cuando Express está listo.
+// Detecta actualizaciones del juego ANTES de que el usuario abra el navegador.
+function startupVersionCheck() {
+  try {
+    console.log('[Startup] Iniciando chequeo de versiones...');
+
+    // 1. Migrar hashes viejos: el algoritmo de hash cambió (antes usaba los archivos
+    //    gestionados, ahora usa la carpeta del juego). Si hay hashes guardados con el
+    //    método anterior, limpiarlos para que en esta corrida se registren correctamente.
+    const cfg = loadConfig();
+    if (cfg._hashAlgorithmVersion !== 2) {
+      console.log('[Startup] Migrando hashes de versión anterior (algoritmo v1 -> v2)...');
+      saveConfig({ lastKnownVersionHashes: {}, _hashAlgorithmVersion: 2 });
+    }
+
+    // 2. Obtener todas las versiones disponibles y chequear cada una
+    const versions = getVersions();
+    const results = {};
+    for (const ver of versions) {
+      try {
+        const r = checkAndHandleVersionUpdate(ver);
+        results[ver] = r;
+        if (r.updated) {
+          console.log(`[Startup] ¡Actualización detectada en ${ver}! Personalizaciones reaplicadas: ${r.reapplied}`);
+        } else if (r.firstRun) {
+          console.log(`[Startup] Primera detección de ${ver}: hash registrado y backups guardados.`);
+        } else if (r.detected) {
+          console.log(`[Startup] Versión ${ver}: sin cambios detectados.`);
+        } else {
+          console.log(`[Startup] Versión ${ver}: archivos no accesibles (${r.reason || 'sin ruta válida'}).`);
+        }
+      } catch (e) {
+        console.error(`[Startup] Error al chequear versión ${ver}:`, e);
+        results[ver] = { detected: false, error: e.message };
+      }
+    }
+
+    _startupCheckResult = {
+      checkedAt: new Date().toISOString(),
+      versions: results,
+      updatesDetected: Object.values(results).some(r => r.updated)
+    };
+    console.log('[Startup] Chequeo completado.', _startupCheckResult);
+  } catch (e) {
+    console.error('[Startup] Error general en startupVersionCheck:', e);
+    _startupCheckResult = { error: e.message, checkedAt: new Date().toISOString() };
+  }
+}
+
 // Exportar función para que Electron la use como servidor integrado
 function createServer(port, onReady) {
   const p = port || PORT;
   return app.listen(p, '127.0.0.1', () => {
     console.log(`Servidor Express iniciado en http://127.0.0.1:${p}`);
+    // Ejecutar chequeo de versión ANTES de abrir la ventana del navegador
+    startupVersionCheck();
     if (typeof onReady === 'function') onReady();
   });
 }
 
-module.exports = { createServer };
+module.exports = { createServer, startupVersionCheck };
 
 const allowedOrigins = [`http://127.0.0.1:${PORT}`, `http://localhost:${PORT}`];
 app.use(cors({
@@ -50,6 +104,13 @@ app.get(['/', '/linux', '/windows'], (req, res) => {
 // Endpoint de estado/ping (Electron gestiona el ciclo de vida de la app)
 app.get('/api/ping', (req, res) => {
   res.json({ success: true, message: 'pong' });
+});
+
+// Devuelve el resultado del chequeo de versión que ocurrió al arrancar el servidor.
+// El cliente lo consulta una vez al cargar para saber si hubo actualizaciones detectadas
+// antes de que el usuario abriera el navegador.
+app.get('/api/startup-status', (req, res) => {
+  res.json({ success: true, startup: _startupCheckResult });
 });
 
 const os = require('os');
@@ -90,36 +151,121 @@ function getBackupsDir() {
   return dir;
 }
 
-// Guarda una copia del archivo original sin modificar si aún no existe backup
+// Guarda una copia del archivo original sin modificar si aún no existe backup.
+// Solo escribe UNA VEZ: si ya existe el .original, no lo pisa (protege el estado limpio del juego).
 function ensureOriginalBackup(originalFilePath, identifier) {
   try {
-    if (!originalFilePath || !fs.existsSync(originalFilePath)) return;
+    if (!originalFilePath || !fs.existsSync(originalFilePath)) return false;
     const bDir = getBackupsDir();
     const backupFile = path.join(bDir, `${identifier}.original`);
     if (!fs.existsSync(backupFile)) {
       fs.copyFileSync(originalFilePath, backupFile);
       console.log(`[Backup] Original guardado: ${identifier}.original`);
+      return true;
     }
+    return false; // Ya existía, no se sobreescribió
   } catch (e) {
     console.error(`[Backup] Error al respaldar ${identifier}:`, e);
+    return false;
   }
 }
 
-// Calcula una firma/hash del entorno del juego (tamaños, mtimes y rutas)
+// Sobreescribe el backup con la versión actual del archivo (usar SOLO cuando el juego se actualiza,
+// después de haber restaurado primero el archivo original).
+function forceOriginalBackup(originalFilePath, identifier) {
+  try {
+    if (!originalFilePath || !fs.existsSync(originalFilePath)) return false;
+    const bDir = getBackupsDir();
+    const backupFile = path.join(bDir, `${identifier}.original`);
+    fs.copyFileSync(originalFilePath, backupFile);
+    console.log(`[Backup] Original actualizado (versión nueva del juego): ${identifier}.original`);
+    return true;
+  } catch (e) {
+    console.error(`[Backup] Error al actualizar backup ${identifier}:`, e);
+    return false;
+  }
+}
+
+// Restaura un archivo a su copia original guardada (si existe).
+function restoreFromBackup(identifier, targetFilePath) {
+  try {
+    const bDir = getBackupsDir();
+    const backupFile = path.join(bDir, `${identifier}.original`);
+    if (!fs.existsSync(backupFile)) return false;
+    const dir = path.dirname(targetFilePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.copyFileSync(backupFile, targetFilePath);
+    console.log(`[Backup] Restaurado: ${identifier}.original -> ${targetFilePath}`);
+    return true;
+  } catch (e) {
+    console.error(`[Backup] Error al restaurar ${identifier}:`, e);
+    return false;
+  }
+}
+
+// Calcula el hash de la CARPETA del juego (no de los archivos que nosotros modificamos).
+// Hashea nombres + tamaños de los archivos directos de la carpeta Client/Data/Game/,
+// excluyendo los archivos que HytaleBgManager modifica para evitar falsos positivos.
+const MANAGED_FILES = new Set(['MainMenuBackgrounds.json', 'NewsTilesCarousel.ui', 'HomePage.ui']);
+
 function computeGameVersionHash(paths) {
   try {
-    const hash = crypto.createHash('sha256');
-    const files = [paths.jsonPath, paths.newsCarouselPath, paths.homePagePath].filter(Boolean);
-    let count = 0;
-    for (const f of files) {
-      if (fs.existsSync(f)) {
-        const stat = fs.statSync(f);
-        hash.update(`${f}:${stat.size}:${stat.mtimeMs}`);
-        count++;
+    // Estrategia 1: hashear el directorio que contiene los archivos del juego
+    // usando archivos que NO modificamos nosotros.
+    if (paths.jsonPath) {
+      const gameDir = path.dirname(paths.jsonPath); // .../Client/Data/Game
+      if (fs.existsSync(gameDir)) {
+        const hash = crypto.createHash('sha256');
+        let count = 0;
+        try {
+          const entries = fs.readdirSync(gameDir, { withFileTypes: true });
+          for (const entry of entries) {
+            if (MANAGED_FILES.has(entry.name)) continue; // Ignorar archivos que nosotros escribimos
+            if (entry.isFile()) {
+              const fpath = path.join(gameDir, entry.name);
+              const stat = fs.statSync(fpath);
+              hash.update(`${entry.name}:${stat.size}:${stat.mtimeMs}`);
+              count++;
+            } else if (entry.isDirectory()) {
+              // Incluir subcarpetas (nombre + mtime) pero sin entrar recursivamente
+              const stat = fs.statSync(path.join(gameDir, entry.name));
+              hash.update(`dir:${entry.name}:${stat.mtimeMs}`);
+              count++;
+            }
+          }
+        } catch (e) { /* sin permisos: continuar */ }
+
+        if (count > 0) {
+          // También incluir el directorio Client/ padre como ancla de versión
+          try {
+            const clientDir = path.dirname(path.dirname(gameDir)); // .../Client
+            if (fs.existsSync(clientDir)) {
+              const cStat = fs.statSync(clientDir);
+              hash.update(`client:${cStat.mtimeMs}`);
+            }
+          } catch (e) { /* ignorar */ }
+          return hash.digest('hex').substring(0, 16);
+        }
       }
     }
-    if (count === 0) return null;
-    return hash.digest('hex').substring(0, 16);
+
+    // Estrategia 2 (fallback): hashear la carpeta raíz de la versión
+    // usando solo el mtime de directorios de primer nivel.
+    const dirsToCheck = [
+      paths.jsonPath && path.dirname(path.dirname(path.dirname(paths.jsonPath))), // Client/
+      paths.homePagePath && path.dirname(path.dirname(paths.homePagePath)),        // MainMenu/../
+    ].filter(Boolean);
+
+    for (const dir of dirsToCheck) {
+      if (fs.existsSync(dir)) {
+        const hash = crypto.createHash('sha256');
+        const stat = fs.statSync(dir);
+        hash.update(`${dir}:${stat.mtimeMs}`);
+        return hash.digest('hex').substring(0, 16);
+      }
+    }
+
+    return null;
   } catch (e) {
     return null;
   }
@@ -137,7 +283,9 @@ function saveUserCustomization(version, customizationData) {
   saveConfig({ userCustomizations: customs });
 }
 
-// Re-aplica las configuraciones del usuario sobre los archivos del juego
+// Re-aplica las configuraciones del usuario sobre los archivos del juego.
+// PRE-CONDICIÓN: los archivos del juego ya deben estar en su estado original
+// (sea porque nunca fueron modificados o porque se llamó restoreFromBackup antes).
 function applyCustomizationToGame(version) {
   const cfg = loadConfig();
   const custom = (cfg.userCustomizations && cfg.userCustomizations[version]) || null;
@@ -151,7 +299,6 @@ function applyCustomizationToGame(version) {
     try {
       const dir = path.dirname(paths.jsonPath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      ensureOriginalBackup(paths.jsonPath, `${version}_MainMenuBackgrounds.json`);
       fs.writeFileSync(paths.jsonPath, JSON.stringify(custom.bgConfig, null, 2), 'utf8');
       changed = true;
     } catch (e) {
@@ -164,7 +311,6 @@ function applyCustomizationToGame(version) {
     try {
       const dir = path.dirname(paths.newsCarouselPath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      ensureOriginalBackup(paths.newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
       const targetContent = custom.newsVisible ? DEFAULT_NEWS_UI : INVISIBLE_ZERO_NEWS_UI;
       fs.writeFileSync(paths.newsCarouselPath, targetContent, 'utf8');
       changed = true;
@@ -173,10 +319,9 @@ function applyCustomizationToGame(version) {
     }
   }
 
-  // 3. Re-aplicar Avatar Preview (.ui)
+  // 3. Re-aplicar Avatar Preview (.ui): leer archivo limpio del juego y aplicar parche
   if (custom.avatarConfig && paths.homePagePath && fs.existsSync(paths.homePagePath)) {
     try {
-      ensureOriginalBackup(paths.homePagePath, `${version}_HomePage.ui`);
       let content = fs.readFileSync(paths.homePagePath, 'utf8');
       const isVisible = custom.avatarConfig.visible !== false;
       const newTop = custom.avatarConfig.top ?? 320;
@@ -203,19 +348,15 @@ function applyCustomizationToGame(version) {
     }
   }
 
-  // Actualizar el hash registrado tras aplicar cambios
-  const newHash = computeGameVersionHash(paths);
-  if (newHash) {
-    const vHashes = cfg.lastKnownVersionHashes || {};
-    vHashes[version] = newHash;
-    saveConfig({ lastKnownVersionHashes: vHashes });
-  }
-
   return { applied: changed };
 }
 
-// Chequeo Reactivo de versión del juego:
-// Compara hash actual contra el último registrado. Si cambió y hay personalización, resincroniza.
+// Chequeo Reactivo de versión del juego.
+// Compara el hash de la CARPETA del juego (no de los archivos modificados) contra el último registrado.
+// Si cambió → nueva versión real del juego detectada:
+//   1. Restaurar archivos a su estado original guardado (para que el instalador no los vea corruptos)
+//   2. Guardar nuevos backups de esos archivos limpios de la versión recién instalada
+//   3. Re-aplicar la personalización del usuario sobre los nuevos archivos
 function checkAndHandleVersionUpdate(version) {
   const paths = getPathsForVersion(version);
   const currentHash = computeGameVersionHash(paths);
@@ -231,28 +372,43 @@ function checkAndHandleVersionUpdate(version) {
     // Primera vez que se detecta esta versión: registrar hash y respaldar originales
     vHashes[version] = currentHash;
     saveConfig({ lastKnownVersionHashes: vHashes });
-    ensureOriginalBackup(paths.jsonPath, `${version}_MainMenuBackgrounds.json`);
-    ensureOriginalBackup(paths.newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
-    ensureOriginalBackup(paths.homePagePath, `${version}_HomePage.ui`);
+    ensureOriginalBackup(paths.jsonPath,         `${version}_MainMenuBackgrounds.json`);
+    ensureOriginalBackup(paths.newsCarouselPath,  `${version}_NewsTilesCarousel.ui`);
+    ensureOriginalBackup(paths.homePagePath,      `${version}_HomePage.ui`);
     return { detected: true, updated: false, firstRun: true };
   }
 
   if (lastHash !== currentHash) {
-    console.log(`[Actualización detectada] La versión ${version} cambió (Hash anterior: ${lastHash} -> Actual: ${currentHash})`);
+    console.log(`[Actualización detectada] Versión ${version} cambió (${lastHash} -> ${currentHash})`);
 
-    // Guardar nuevo backup del juego recién actualizado como base
-    ensureOriginalBackup(paths.jsonPath, `${version}_MainMenuBackgrounds.json`);
-    ensureOriginalBackup(paths.newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
-    ensureOriginalBackup(paths.homePagePath, `${version}_HomePage.ui`);
+    // PASO 1: Restaurar archivos a su estado original ANTES de respaldar los nuevos.
+    // Esto garantiza que, si el instalador vuelve a correr, encuentre archivos intactos.
+    const restoredJson  = restoreFromBackup(`${version}_MainMenuBackgrounds.json`, paths.jsonPath);
+    const restoredNews  = restoreFromBackup(`${version}_NewsTilesCarousel.ui`,      paths.newsCarouselPath);
+    const restoredHome  = restoreFromBackup(`${version}_HomePage.ui`,               paths.homePagePath);
 
-    // Re-aplicar personalización del usuario sobre los nuevos archivos
+    // PASO 2: Ahora que los archivos están en estado limpio, respaldar la nueva versión del juego.
+    // Se usa forceOriginalBackup para pisar el backup anterior con el recién instalado.
+    forceOriginalBackup(paths.jsonPath,        `${version}_MainMenuBackgrounds.json`);
+    forceOriginalBackup(paths.newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
+    forceOriginalBackup(paths.homePagePath,     `${version}_HomePage.ui`);
+
+    // PASO 3: Re-aplicar la personalización guardada sobre los nuevos archivos del juego.
     const syncRes = applyCustomizationToGame(version);
+
+    // Registrar el nuevo hash de la carpeta (ya incluye los cambios del usuario)
+    const newHashAfter = computeGameVersionHash(paths);
+    if (newHashAfter) {
+      vHashes[version] = newHashAfter;
+      saveConfig({ lastKnownVersionHashes: vHashes });
+    }
 
     return {
       detected: true,
       updated: true,
       previousHash: lastHash,
-      newHash: currentHash,
+      newHash: newHashAfter || currentHash,
+      restored: { json: restoredJson, news: restoredNews, home: restoredHome },
       reapplied: syncRes.applied
     };
   }
@@ -719,15 +875,8 @@ app.post('/api/avatar-status', (req, res) => {
     // Guardar personalización del usuario separada en config.json
     saveUserCustomization(version, { avatarConfig: { visible: isVisible, top: newTop, left: newLeft } });
 
-    // Actualizar hash registrado
-    const paths = getPathsForVersion(version);
-    const newHash = computeGameVersionHash(paths);
-    if (newHash) {
-      const cfg = loadConfig();
-      const vHashes = cfg.lastKnownVersionHashes || {};
-      vHashes[version] = newHash;
-      saveConfig({ lastKnownVersionHashes: vHashes });
-    }
+    // Nota: NO se actualiza lastKnownVersionHashes aquí.
+    // El hash trackea la carpeta del juego (archivos que no modificamos), no nuestras escrituras.
 
     res.json({ success: true, visible: isVisible, top: newTop, left: newLeft });
   } catch (err) {
@@ -782,15 +931,8 @@ app.post('/api/news-status', (req, res) => {
     // Guardar personalización del usuario separada en config.json
     saveUserCustomization(version, { newsVisible: visible });
 
-    // Actualizar hash registrado
-    const paths = getPathsForVersion(version);
-    const newHash = computeGameVersionHash(paths);
-    if (newHash) {
-      const cfg = loadConfig();
-      const vHashes = cfg.lastKnownVersionHashes || {};
-      vHashes[version] = newHash;
-      saveConfig({ lastKnownVersionHashes: vHashes });
-    }
+    // Nota: NO se actualiza lastKnownVersionHashes aquí.
+    // El hash trackea la carpeta del juego (archivos que no modificamos), no nuestras escrituras.
 
     res.json({ success: true, visible });
   } catch (err) {
@@ -835,15 +977,8 @@ app.post('/api/config', (req, res) => {
     // Guardar personalización del usuario separada en config.json
     saveUserCustomization(version, { bgConfig: req.body });
 
-    // Actualizar hash registrado
-    const paths = getPathsForVersion(version);
-    const newHash = computeGameVersionHash(paths);
-    if (newHash) {
-      const cfg = loadConfig();
-      const vHashes = cfg.lastKnownVersionHashes || {};
-      vHashes[version] = newHash;
-      saveConfig({ lastKnownVersionHashes: vHashes });
-    }
+    // Nota: NO se actualiza lastKnownVersionHashes aquí.
+    // El hash trackea la carpeta del juego (archivos que no modificamos), no nuestras escrituras.
 
     res.json({ success: true });
   } catch (err) {

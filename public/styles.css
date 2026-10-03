@@ -111,6 +111,17 @@ body {
     align-items: center;
     padding-bottom: 15px;
     border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: -25px;
+    z-index: 100;
+    background-color: var(--bg-dark);
+    padding-top: 25px;
+    margin-top: -25px;
+    margin-left: -25px;
+    margin-right: -25px;
+    padding-left: 25px;
+    padding-right: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .header-actions {

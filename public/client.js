@@ -131,12 +131,37 @@ const btnResetAvatar = document.getElementById('btn-reset-avatar');
 
 // El servidor se mantiene activo mientras se use la aplicación
 
+// Consulta el resultado del chequeo de versión que ya corrió al arrancar el servidor.
+// Si el servidor detectó y reaplicó actualizaciones, muestra el toast y recarga datos.
+// Si el servidor no pudo chequear (archivos no disponibles aún), hace el chequeo ahora.
 async function checkGameVersionUpdate() {
     try {
+        // 1. Consultar primero si el servidor ya hizo el chequeo al arrancar
+        const startupRes = await fetch('/api/startup-status').then(r => r.json()).catch(() => null);
+        if (startupRes && startupRes.success && startupRes.startup) {
+            const startup = startupRes.startup;
+            // Si el arranque detectó actualizaciones → recargar UI y avisar
+            if (startup.updatesDetected) {
+                showToast(translations[currentLang].toastUpdateSynced || '⚡ ¡Actualización de Hytale detectada! Personalizaciones reaplicadas.');
+                await loadData();
+                await loadNewsStatus();
+                await loadAvatarStatus();
+                await refreshTexturePresets();
+                return; // El servidor ya manejó todo, no hace falta re-chequear
+            }
+
+            // Si el arranque chequeó esta versión y no hubo cambios → no re-chequear
+            const vResult = startup.versions && startup.versions[currentVersion];
+            if (vResult && vResult.detected && !vResult.updated) {
+                return; // Sin cambios detectados al arrancar, nada que hacer
+            }
+        }
+
+        // 2. Fallback: chequear directamente (útil si los archivos no estaban disponibles al arrancar
+        //    — ej: usuario configuró la ruta después de arrancar, o primera corrida sin ruta)
         const res = await fetch(`/api/check-version?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
         if (res.success && res.updated && res.reapplied) {
-            showToast(translations[currentLang].toastUpdateSynced || "⚡ ¡Actualización detectada! Personalización reaplicada.");
-            // Recargar datos tras reaplicación automática
+            showToast(translations[currentLang].toastUpdateSynced || '⚡ ¡Actualización detectada! Personalización reaplicada.');
             await loadData();
             await loadNewsStatus();
             await loadAvatarStatus();
