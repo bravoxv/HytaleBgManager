@@ -118,6 +118,50 @@
                     </div>
                 </div>
 
+                <!-- Card: Carpeta de imágenes PNG personales -->
+                <div class="card images-source-card" style="border-color: #7c3aed; background: linear-gradient(180deg, #1e1b2e 0%, #0f0d1a 100%);">
+                    <div class="card-header">
+                        <h3 style="display:flex; align-items:center; gap:8px; color: #a78bfa;">
+                            <span>🗂️</span>
+                            <span data-i18n="imagesSourceTitle">Carpeta de mis imágenes PNG</span>
+                        </h3>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <!-- Badge: cantidad de PNGs en la carpeta (visible cuando está configurado) -->
+                            <span id="images-source-count-badge" class="hidden" style="font-size:0.75rem; background:rgba(124,58,237,0.2); color:#c4b5fd; padding:4px 10px; border-radius:12px; border:1px solid rgba(124,58,237,0.35); font-weight:600;"></span>
+                            <!-- Botón engranaje para reconfigurar (visible cuando está configurado) -->
+                            <button id="btn-images-source-gear" class="hidden" title="Cambiar carpeta de imágenes" style="background:rgba(124,58,237,0.15); border:1px solid rgba(124,58,237,0.3); color:#a78bfa; border-radius:6px; padding:5px 9px; cursor:pointer; font-size:1rem; transition: all 0.2s;">⚙️</button>
+                        </div>
+                    </div>
+                    <p class="help-text" data-i18n="imagesSourceHelp">
+                        Guardá tus PNGs en una carpeta propia fuera del juego. La app los copiará a <code>BackgroundImages</code> cuando sea necesario — si Hytale los borra al actualizar, hacé clic en <strong>Aplicar imágenes</strong> para restaurarlos sin tener que subirlos de nuevo.
+                    </p>
+
+                    <!-- Estado: sin configurar -->
+                    <div id="images-source-setup" style="margin-top:12px;">
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                            <input type="text" id="images-source-input"
+                                placeholder="Ej: C:\Users\TuUsuario\MisCarpetasHytale\Imagenes"
+                                style="flex:1; min-width:240px; padding:10px 14px; background:#07080e; border:1px solid rgba(124,58,237,0.4); border-radius:6px; color:#f8fafc; font-size:0.9rem;">
+                            <button id="btn-images-source-save" class="btn" style="white-space:nowrap; padding:10px 18px; background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; border:none; border-radius:6px; font-weight:700; cursor:pointer; transition:filter 0.2s;" data-i18n="imagesSourceSaveBtn">
+                                💾 Guardar y aplicar
+                            </button>
+                        </div>
+                        <p id="images-source-setup-msg" class="help-text hidden" style="margin-top:8px; font-size:0.8rem;"></p>
+                    </div>
+
+                    <!-- Estado: configurado (ruta guardada + botón aplicar) -->
+                    <div id="images-source-configured" class="hidden" style="margin-top:12px;">
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 14px; background:rgba(7,8,14,0.7); border:1px solid rgba(124,58,237,0.25); border-radius:8px;">
+                            <span style="font-size:1rem; flex-shrink:0;">📁</span>
+                            <span id="images-source-path-display" style="flex:1; font-size:0.85rem; color:#c4b5fd; font-family:monospace; word-break:break-all;"></span>
+                            <button id="btn-images-source-apply" class="btn" style="white-space:nowrap; padding:8px 16px; background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; border:none; border-radius:6px; font-weight:700; cursor:pointer; transition:filter 0.2s; flex-shrink:0;" data-i18n="imagesSourceApplyBtn">
+                                ▶️ Aplicar imágenes
+                            </button>
+                        </div>
+                        <p id="images-source-apply-msg" class="help-text hidden" style="margin-top:8px; font-size:0.8rem;"></p>
+                    </div>
+                </div>
+
                 <div class="form-grid">
                     <!-- Images & Interface Settings -->
                     <div class="card">

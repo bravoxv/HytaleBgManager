@@ -413,6 +413,150 @@ async function init() {
 
     imgNameInput.addEventListener('input', updateCurrentBgFromInputs);
     blurredInput.addEventListener('input', updateCurrentBgFromInputs);
+
+    // Inicializar el card de carpeta de imágenes
+    await loadImagesSourceCard();
+}
+
+// ── Card de Carpeta de Imágenes PNG del usuario ────────────────────────────
+async function loadImagesSourceCard() {
+    const setupDiv      = document.getElementById('images-source-setup');
+    const configuredDiv = document.getElementById('images-source-configured');
+    const inputEl       = document.getElementById('images-source-input');
+    const pathDisplay   = document.getElementById('images-source-path-display');
+    const countBadge    = document.getElementById('images-source-count-badge');
+    const gearBtn       = document.getElementById('btn-images-source-gear');
+    const saveBtn       = document.getElementById('btn-images-source-save');
+    const applyBtn      = document.getElementById('btn-images-source-apply');
+    const setupMsg      = document.getElementById('images-source-setup-msg');
+    const applyMsg      = document.getElementById('images-source-apply-msg');
+    if (!setupDiv) return;
+
+    function showSetup(prefill) {
+        setupDiv.classList.remove('hidden');
+        configuredDiv.classList.add('hidden');
+        gearBtn.classList.add('hidden');
+        countBadge.classList.add('hidden');
+        if (prefill) inputEl.value = prefill;
+        setupMsg.classList.add('hidden');
+        setupMsg.textContent = '';
+    }
+
+    function showConfigured(sourcePath, fileCount) {
+        setupDiv.classList.add('hidden');
+        configuredDiv.classList.remove('hidden');
+        pathDisplay.textContent = sourcePath;
+        gearBtn.classList.remove('hidden');
+        if (fileCount !== null && fileCount !== undefined) {
+            countBadge.textContent = `${fileCount} PNG${fileCount !== 1 ? 's' : ''}`;
+            countBadge.classList.remove('hidden');
+        }
+        applyMsg.classList.add('hidden');
+        applyMsg.textContent = '';
+    }
+
+    // Cargar estado inicial
+    try {
+        const res = await fetch('/api/images-source-path').then(r => r.json());
+        if (res.success && res.sourcePath) {
+            showConfigured(res.sourcePath, res.fileCount);
+        } else {
+            showSetup();
+        }
+    } catch (e) {
+        showSetup();
+    }
+
+    // Botón engranaje: volver al modo setup
+    gearBtn.addEventListener('click', () => showSetup(pathDisplay.textContent));
+
+    // Botón Guardar y aplicar
+    saveBtn.addEventListener('click', async () => {
+        const val = (inputEl.value || '').trim();
+        if (!val) {
+            setupMsg.textContent = '⚠️ Ingresá una ruta válida.';
+            setupMsg.style.color = '#f87171';
+            setupMsg.classList.remove('hidden');
+            return;
+        }
+        saveBtn.disabled = true;
+        saveBtn.textContent = '⏳ Guardando...';
+        try {
+            const res = await fetch('/api/images-source-path', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sourcePath: val })
+            }).then(r => r.json());
+
+            if (!res.success) {
+                setupMsg.textContent = '❌ ' + res.error;
+                setupMsg.style.color = '#f87171';
+                setupMsg.classList.remove('hidden');
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Guardar y aplicar';
+                return;
+            }
+
+            // Guardado OK → aplicar automáticamente
+            const applyRes = await fetch(`/api/apply-images-from-source?version=${encodeURIComponent(currentVersion)}`, {
+                method: 'POST'
+            }).then(r => r.json());
+
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Guardar y aplicar';
+            showConfigured(res.sourcePath, res.fileCount);
+
+            if (applyRes.success) {
+                showToast(`✅ ${applyRes.copied.length} imagen(es) copiada(s) a Hytale.`);
+                // Refrescar presets de imágenes
+                await loadData();
+            } else {
+                applyMsg.textContent = '⚠️ Carpeta guardada pero no se pudo aplicar: ' + applyRes.error;
+                applyMsg.style.color = '#f59e0b';
+                applyMsg.classList.remove('hidden');
+            }
+        } catch (e) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Guardar y aplicar';
+            setupMsg.textContent = '❌ Error de conexión.';
+            setupMsg.style.color = '#f87171';
+            setupMsg.classList.remove('hidden');
+        }
+    });
+
+    // Botón Aplicar imágenes (cuando ya está configurado)
+    applyBtn.addEventListener('click', async () => {
+        applyBtn.disabled = true;
+        applyBtn.textContent = '⏳ Aplicando...';
+        applyMsg.classList.add('hidden');
+        try {
+            const res = await fetch(`/api/apply-images-from-source?version=${encodeURIComponent(currentVersion)}`, {
+                method: 'POST'
+            }).then(r => r.json());
+
+            applyBtn.disabled = false;
+            applyBtn.textContent = '▶️ Aplicar imágenes';
+
+            if (res.success) {
+                const cnt = res.copied ? res.copied.length : 0;
+                const failCnt = res.failed ? res.failed.length : 0;
+                applyMsg.textContent = `✅ ${cnt} imagen(es) copiada(s)` + (failCnt > 0 ? ` (${failCnt} fallida(s))` : '') + '.';
+                applyMsg.style.color = '#34d399';
+                applyMsg.classList.remove('hidden');
+                if (cnt > 0) await loadData(); // refresca presets
+            } else {
+                applyMsg.textContent = '❌ ' + res.error;
+                applyMsg.style.color = '#f87171';
+                applyMsg.classList.remove('hidden');
+            }
+        } catch (e) {
+            applyBtn.disabled = false;
+            applyBtn.textContent = '▶️ Aplicar imágenes';
+            applyMsg.textContent = '❌ Error de conexión.';
+            applyMsg.style.color = '#f87171';
+            applyMsg.classList.remove('hidden');
+        }
+    });
 }
 
 async function loadVersions() {

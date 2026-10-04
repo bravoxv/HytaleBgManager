@@ -1178,6 +1178,112 @@ app.post('/api/hytale-path', (req, res) => {
   });
 });
 
+// ── Carpeta de imágenes PNG del usuario ──────────────────────────────────────
+// El usuario guarda sus PNGs personalizados en una carpeta propia (fuera del juego).
+// La app los copia a BackgroundImages/ de Hytale cuando el usuario lo solicita.
+// Si Hytale borra/reemplaza las imágenes al actualizar, basta con volver a aplicar.
+
+// GET /api/images-source-path — lee la ruta guardada en config.json
+app.get('/api/images-source-path', (req, res) => {
+  const cfg = loadConfig();
+  const sourcePath = cfg.imagesSourcePath || null;
+  let fileCount = null;
+  if (sourcePath && fs.existsSync(sourcePath)) {
+    try {
+      fileCount = fs.readdirSync(sourcePath).filter(f => f.toLowerCase().endsWith('.png')).length;
+    } catch (e) {}
+  }
+  res.json({ success: true, sourcePath, fileCount, exists: sourcePath ? fs.existsSync(sourcePath) : false });
+});
+
+// POST /api/images-source-path — guarda la ruta en config.json y la valida
+app.post('/api/images-source-path', (req, res) => {
+  let { sourcePath } = req.body;
+  if (!sourcePath || !sourcePath.trim()) {
+    return res.json({ success: false, error: 'La ruta no puede estar vacía' });
+  }
+  sourcePath = sourcePath.trim();
+
+  // Expandir tilde en Linux/macOS
+  if (sourcePath.startsWith('~/') || sourcePath === '~') {
+    const os = require('os');
+    sourcePath = path.join(os.homedir(), sourcePath.slice(sourcePath === '~' ? 1 : 2));
+  }
+
+  if (!fs.existsSync(sourcePath)) {
+    return res.json({ success: false, error: 'La carpeta no existe: ' + sourcePath });
+  }
+
+  let fileCount = 0;
+  try {
+    fileCount = fs.readdirSync(sourcePath).filter(f => f.toLowerCase().endsWith('.png')).length;
+  } catch (e) {
+    return res.json({ success: false, error: 'No se pudo leer la carpeta: ' + e.message });
+  }
+
+  saveConfig({ imagesSourcePath: sourcePath });
+  console.log(`[ImagesSource] Carpeta guardada: ${sourcePath} (${fileCount} PNGs)`);
+  res.json({ success: true, sourcePath, fileCount });
+});
+
+// POST /api/apply-images-from-source — copia los PNGs de la carpeta guardada a BackgroundImages/
+app.post('/api/apply-images-from-source', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  const cfg = loadConfig();
+  const sourcePath = cfg.imagesSourcePath || null;
+
+  if (!sourcePath) {
+    return res.json({ success: false, error: 'No hay carpeta de imágenes configurada' });
+  }
+  if (!fs.existsSync(sourcePath)) {
+    return res.json({ success: false, error: 'La carpeta ya no existe: ' + sourcePath });
+  }
+
+  const { texturesDir } = getPathsForVersion(version);
+  if (!texturesDir) {
+    return res.json({ success: false, error: 'No se encontró la carpeta BackgroundImages de Hytale' });
+  }
+  if (!fs.existsSync(texturesDir)) {
+    fs.mkdirSync(texturesDir, { recursive: true });
+  }
+
+  let files;
+  try {
+    files = fs.readdirSync(sourcePath).filter(f => f.toLowerCase().endsWith('.png'));
+  } catch (e) {
+    return res.json({ success: false, error: 'No se pudo leer la carpeta: ' + e.message });
+  }
+
+  if (files.length === 0) {
+    return res.json({ success: false, error: 'No hay archivos PNG en la carpeta seleccionada' });
+  }
+
+  const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const copied = [], failed = [];
+
+  for (const file of files) {
+    try {
+      const srcFile = path.join(sourcePath, file);
+      // Validar magic bytes (evita copiar archivos con extensión .png pero contenido inválido)
+      const fd = fs.openSync(srcFile, 'r');
+      const header = Buffer.alloc(8);
+      fs.readSync(fd, header, 0, 8, 0);
+      fs.closeSync(fd);
+      if (!header.equals(PNG_SIG)) {
+        failed.push({ file, error: 'No es un PNG válido' });
+        continue;
+      }
+      fs.copyFileSync(srcFile, path.join(texturesDir, file));
+      copied.push(file);
+    } catch (e) {
+      failed.push({ file, error: e.message });
+    }
+  }
+
+  console.log(`[ImagesSource] Copiados: ${copied.length}/${files.length} a ${texturesDir}`);
+  res.json({ success: true, copied, failed, texturesDir });
+});
+
 // Upload PNG image
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
