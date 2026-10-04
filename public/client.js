@@ -264,12 +264,12 @@ async function checkAppUpdate() {
                         if (desc) desc.textContent = t.updateAlreadyLatest || 'Ya tenías la última versión.';
                         link.classList.add('hidden');
                     } else if (upRes.needsRestart) {
-                        if (desc) desc.textContent = `${count} archivo(s) actualizado(s). Reinicia la app para aplicar los cambios.`;
-                        if (btnLabel) btnLabel.textContent = '🔄 Reiniciar';
+                        if (desc) desc.textContent = `${count} archivo(s) actualizado(s). Reiniciá la app para aplicar los cambios.`;
+                        if (btnLabel) btnLabel.textContent = '🔄 Reiniciar ahora';
                         link.style.opacity = '1';
-                        // Al hacer click de nuevo, recargar la página (reinicia el servidor si es Electron)
+                        link.dataset.applying = 'restart';
+                        // Nuevo listener de un solo uso para el click de reinicio
                         link.addEventListener('click', (e) => { e.preventDefault(); location.reload(); }, { once: true });
-                        delete link.dataset.applying;
                     } else {
                         if (desc) desc.textContent = `${count} archivo(s) actualizado(s) correctamente.`;
                         link.classList.add('hidden');
