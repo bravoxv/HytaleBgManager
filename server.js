@@ -113,6 +113,52 @@ app.get('/api/startup-status', (req, res) => {
   res.json({ success: true, startup: _startupCheckResult });
 });
 
+// POST /api/restore-originals
+// Restaura TODOS los archivos del juego a su estado original desde los backups.
+// Usar ANTES de abrir el launcher de Hytale para actualizar, evitando que detecte
+// los archivos como corruptos por las modificaciones que hicimos.
+// Los archivos quedan en su estado limpio hasta que el usuario vuelva a guardar
+// cambios en la app (que los vuelve a aplicar).
+app.post('/api/restore-originals', (req, res) => {
+  try {
+    const versions = getVersions();
+    const results = {};
+
+    for (const ver of versions) {
+      const paths = getPathsForVersion(ver);
+      if (!paths || !paths.homePage || !paths.newsTiles || !paths.bgJson) {
+        results[ver] = { skipped: true, reason: 'Rutas no disponibles' };
+        continue;
+      }
+
+      const filesToRestore = [
+        { id: `${ver}_homePage`,  target: paths.homePage },
+        { id: `${ver}_newsTiles`, target: paths.newsTiles },
+        { id: `${ver}_bgJson`,    target: paths.bgJson }
+      ];
+
+      const verResult = { restored: [], notFound: [] };
+      for (const { id, target } of filesToRestore) {
+        const restored = restoreFromBackup(id, target);
+        if (restored) {
+          verResult.restored.push(target);
+        } else {
+          verResult.notFound.push(id);
+        }
+      }
+      results[ver] = verResult;
+    }
+
+    const totalRestored = Object.values(results).reduce((acc, r) => acc + (r.restored ? r.restored.length : 0), 0);
+    console.log(`[RestoreOriginals] Archivos restaurados: ${totalRestored}`);
+
+    res.json({ success: true, results, totalRestored });
+  } catch (err) {
+    console.error('[RestoreOriginals] Error:', err);
+    res.json({ success: false, error: err.message });
+  }
+});
+
 const os = require('os');
 
 function getConfigFile() {

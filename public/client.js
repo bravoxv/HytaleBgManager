@@ -40,7 +40,11 @@ const translations = {
         updateApplying: "Aplicando...",
         updateDone: "Actualización aplicada",
         updateAlreadyLatest: "Ya tenías la última versión.",
-        updateDownload: "Descargar ZIP"
+        updateDownload: "Descargar ZIP",
+        restoreOriginalsBtn: "Preparar para actualizar",
+        restoreOriginalsConfirm: "Esto restaurará los archivos del juego a su estado original.\n\nDespués de actualizar Hytale, abrí esta app y guardá los cambios para volver a aplicar tu personalización.\n\n¿Continuar?",
+        restoreOriginalsOk: "✅ Archivos originales restaurados. Ahora podés abrir el launcher de Hytale y actualizar sin problemas.",
+        restoreOriginalsError: "Error al restaurar archivos."
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -78,7 +82,11 @@ const translations = {
         updateApplying: "Applying...",
         updateDone: "Update applied",
         updateAlreadyLatest: "You already have the latest version.",
-        updateDownload: "Download ZIP"
+        updateDownload: "Download ZIP",
+        restoreOriginalsBtn: "Prepare for update",
+        restoreOriginalsConfirm: "This will restore the game files to their original state.\n\nAfter updating Hytale, open this app and save your changes to re-apply your customization.\n\nContinue?",
+        restoreOriginalsOk: "✅ Original files restored. You can now open the Hytale launcher and update without issues.",
+        restoreOriginalsError: "Error restoring files."
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -116,7 +124,11 @@ const translations = {
         updateApplying: "Aplicando...",
         updateDone: "Atualização aplicada",
         updateAlreadyLatest: "Você já tem a última versão.",
-        updateDownload: "Baixar ZIP"
+        updateDownload: "Baixar ZIP",
+        restoreOriginalsBtn: "Preparar para atualizar",
+        restoreOriginalsConfirm: "Isso vai restaurar os arquivos do jogo ao estado original.\n\nApós atualizar o Hytale, abra este app e salve as alterações para reaplicar sua personalização.\n\nContinuar?",
+        restoreOriginalsOk: "✅ Arquivos originais restaurados. Agora você pode abrir o launcher do Hytale e atualizar sem problemas.",
+        restoreOriginalsError: "Erro ao restaurar arquivos."
     }
 };
 
@@ -130,6 +142,7 @@ const selectImgPreset = document.getElementById('select-img-preset');
 const selectBlurPreset = document.getElementById('select-blurred-preset');
 const fileUpload = document.getElementById('file-upload');
 const btnSaveAll = document.getElementById('btn-save-all');
+const btnRestoreOriginals = document.getElementById('btn-restore-originals');
 const btnAddVfx = document.getElementById('btn-add-vfx');
 const btnApplyVfx = document.getElementById('btn-apply-vfx');
 const vfxListEl = document.getElementById('vfx-list');
@@ -337,6 +350,45 @@ async function init() {
     btnOpenFolder.addEventListener('click', () => fetch(`/api/open-folder?version=${encodeURIComponent(currentVersion)}`, { method: 'POST' }));
     btnAddVfx.addEventListener('click', addVfxEffect);
     btnApplyVfx.addEventListener('click', applyVfxChanges);
+
+    if (btnRestoreOriginals) {
+        btnRestoreOriginals.addEventListener('click', async () => {
+            const t = translations[currentLang] || translations['es'];
+            const confirmed = confirm(
+                (t.restoreOriginalsConfirm || 'Esto restaurará los archivos del juego a su estado original.\n\nDespués de actualizar Hytale, abrí esta app y guardá los cambios para volver a aplicar tu personalización.\n\n¿Continuar?')
+            );
+            if (!confirmed) return;
+
+            btnRestoreOriginals.disabled = true;
+            btnRestoreOriginals.textContent = '⏳ Restaurando...';
+
+            try {
+                const res = await fetch('/api/restore-originals', { method: 'POST' }).then(r => r.json());
+                if (res.success) {
+                    btnRestoreOriginals.textContent = '✅ Archivos restaurados';
+                    btnRestoreOriginals.classList.add('restored');
+                    showToast(t.restoreOriginalsOk || '✅ Archivos originales restaurados. Ahora podés abrir el launcher de Hytale y actualizar sin problemas.');
+                    // Volver al estado normal después de unos segundos
+                    setTimeout(() => {
+                        btnRestoreOriginals.disabled = false;
+                        btnRestoreOriginals.textContent = '🛡️ Preparar para actualizar';
+                        btnRestoreOriginals.classList.remove('restored');
+                        // Actualizar el texto con i18n
+                        const label = t.restoreOriginalsBtn || 'Preparar para actualizar';
+                        btnRestoreOriginals.textContent = '🛡️ ' + label;
+                    }, 5000);
+                } else {
+                    btnRestoreOriginals.disabled = false;
+                    btnRestoreOriginals.textContent = '🛡️ Preparar para actualizar';
+                    showToast((t.restoreOriginalsError || 'Error al restaurar: ') + (res.error || ''), true);
+                }
+            } catch (e) {
+                btnRestoreOriginals.disabled = false;
+                btnRestoreOriginals.textContent = '🛡️ Preparar para actualizar';
+                showToast(t.restoreOriginalsError || 'Error de conexión al restaurar archivos.', true);
+            }
+        });
+    }
 
     chkNewsVisible.addEventListener('change', toggleNewsVisibility);
     chkAvatarVisible.addEventListener('change', applyAvatarChanges);

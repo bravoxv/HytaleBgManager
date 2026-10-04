@@ -318,6 +318,23 @@ select:focus {
     background-color: #2d3746;
 }
 
+.btn-restore {
+    background-color: #1e3a5f;
+    color: #93c5fd;
+    border: 1px solid rgba(147, 197, 253, 0.25);
+}
+
+.btn-restore:hover {
+    background-color: #1e4080;
+    border-color: rgba(147, 197, 253, 0.5);
+}
+
+.btn-restore.restored {
+    background-color: #14532d;
+    color: #86efac;
+    border-color: rgba(134, 239, 172, 0.3);
+}
+
 .btn-info {
     background-color: var(--accent-cyan);
     color: #000;
