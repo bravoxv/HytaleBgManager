@@ -41,10 +41,10 @@ const translations = {
         updateDone: "Actualización aplicada",
         updateAlreadyLatest: "Ya tenías la última versión.",
         updateDownload: "Descargar ZIP",
-        restoreOriginalsBtn: "Preparar para actualizar",
-        restoreOriginalsConfirm: "Esto restaurará los archivos del juego a su estado original.\n\nDespués de actualizar Hytale, abrí esta app y guardá los cambios para volver a aplicar tu personalización.\n\n¿Continuar?",
-        restoreOriginalsOk: "✅ Archivos originales restaurados. Ahora podés abrir el launcher de Hytale y actualizar sin problemas.",
-        restoreOriginalsError: "Error al restaurar archivos."
+        restoreOriginalsBtn: "🔄 Restaurar archivos originales del juego",
+        restoreOriginalsConfirm: "¿Salió una nueva versión de Hytale?\n\nEste botón devuelve los archivos del juego a su estado original para que el launcher no los detecte como corruptos al actualizar.\n\nDespués de actualizar Hytale, abrí esta app y guardá los cambios para volver a aplicar tu personalización.\n\n¿Continuar?",
+        restoreOriginalsOk: "✅ Archivos del juego restaurados. Ahora podés actualizar Hytale sin problemas.",
+        restoreOriginalsError: "Error al restaurar los archivos del juego."
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -83,10 +83,10 @@ const translations = {
         updateDone: "Update applied",
         updateAlreadyLatest: "You already have the latest version.",
         updateDownload: "Download ZIP",
-        restoreOriginalsBtn: "Prepare for update",
-        restoreOriginalsConfirm: "This will restore the game files to their original state.\n\nAfter updating Hytale, open this app and save your changes to re-apply your customization.\n\nContinue?",
-        restoreOriginalsOk: "✅ Original files restored. You can now open the Hytale launcher and update without issues.",
-        restoreOriginalsError: "Error restoring files."
+        restoreOriginalsBtn: "🔄 Restore original game files",
+        restoreOriginalsConfirm: "Is a new version of Hytale available?\n\nThis button restores the game files to their original state so the launcher doesn't detect them as corrupted during the update.\n\nAfter updating Hytale, open this app and save your changes to re-apply your customization.\n\nContinue?",
+        restoreOriginalsOk: "✅ Game files restored. You can now update Hytale without issues.",
+        restoreOriginalsError: "Error restoring game files."
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -125,10 +125,10 @@ const translations = {
         updateDone: "Atualização aplicada",
         updateAlreadyLatest: "Você já tem a última versão.",
         updateDownload: "Baixar ZIP",
-        restoreOriginalsBtn: "Preparar para atualizar",
-        restoreOriginalsConfirm: "Isso vai restaurar os arquivos do jogo ao estado original.\n\nApós atualizar o Hytale, abra este app e salve as alterações para reaplicar sua personalização.\n\nContinuar?",
-        restoreOriginalsOk: "✅ Arquivos originais restaurados. Agora você pode abrir o launcher do Hytale e atualizar sem problemas.",
-        restoreOriginalsError: "Erro ao restaurar arquivos."
+        restoreOriginalsBtn: "🔄 Restaurar arquivos originais do jogo",
+        restoreOriginalsConfirm: "Uma nova versão do Hytale foi lançada?\n\nEste botão restaura os arquivos do jogo ao estado original para que o launcher não os detecte como corrompidos ao atualizar.\n\nApós atualizar o Hytale, abra este app e salve as alterações para reaplicar sua personalização.\n\nContinuar?",
+        restoreOriginalsOk: "✅ Arquivos do jogo restaurados. Agora você pode atualizar o Hytale sem problemas.",
+        restoreOriginalsError: "Erro ao restaurar os arquivos do jogo."
     }
 };
 
@@ -371,11 +371,9 @@ async function init() {
                     // Volver al estado normal después de unos segundos
                     setTimeout(() => {
                         btnRestoreOriginals.disabled = false;
-                        btnRestoreOriginals.textContent = '🛡️ Preparar para actualizar';
                         btnRestoreOriginals.classList.remove('restored');
-                        // Actualizar el texto con i18n
-                        const label = t.restoreOriginalsBtn || 'Preparar para actualizar';
-                        btnRestoreOriginals.textContent = '🛡️ ' + label;
+                        const label = t.restoreOriginalsBtn || '🔄 Restaurar archivos originales del juego';
+                        btnRestoreOriginals.textContent = label;
                     }, 5000);
                 } else {
                     btnRestoreOriginals.disabled = false;
