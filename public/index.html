@@ -119,14 +119,18 @@
                     </div>
                 </div>
 
-                <!-- Card: Carpeta de imágenes PNG personales -->
-                <div class="card images-source-card" style="border-color: #7c3aed; background: linear-gradient(180deg, #1e1b2e 0%, #0f0d1a 100%);">
+                    <div class="card images-source-card" style="border-color: #7c3aed; background: linear-gradient(180deg, #1e1b2e 0%, #0f0d1a 100%);">
                     <div class="card-header">
                         <h3 style="display:flex; align-items:center; gap:8px; color: #a78bfa;">
                             <span>🗂️</span>
                             <span data-i18n="imagesSourceTitle">Carpeta de mis imágenes PNG</span>
                         </h3>
                         <div style="display:flex; align-items:center; gap:8px;">
+                            <!-- Botón Importar PNG movido aquí -->
+                            <label for="file-upload" class="btn btn-accent btn-sm" style="cursor:pointer;" data-i18n="importPng">
+                                ⬆️ Importar PNG
+                            </label>
+                            <input type="file" id="file-upload" accept=".png" style="display:none;">
                             <!-- Badge: cantidad de PNGs en la carpeta (visible cuando está configurado) -->
                             <span id="images-source-count-badge" class="hidden" style="font-size:0.75rem; background:rgba(124,58,237,0.2); color:#c4b5fd; padding:4px 10px; border-radius:12px; border:1px solid rgba(124,58,237,0.35); font-weight:600;"></span>
                             <!-- Botón engranaje para reconfigurar (visible cuando está configurado) -->
@@ -168,11 +172,9 @@
                     <div class="card">
                         <div class="card-header">
                             <h3 data-i18n="backgroundImagesTitle">🖼️ Imágenes del Fondo</h3>
-                            <label for="file-upload" class="btn btn-accent btn-sm" style="cursor:pointer;"
-                                data-i18n="importPng">
-                                ⬆️ Importar PNG
-                            </label>
-                            <input type="file" id="file-upload" accept=".png" style="display:none;">
+                            <button id="btn-refresh-presets" class="btn btn-secondary btn-sm" title="Actualizar lista de imágenes disponibles" style="padding:5px 10px; font-size:0.85rem;">
+                                🔄 Actualizar
+                            </button>
                         </div>
                         <p class="help-text" data-i18n="pngHelpText">Solo se permiten archivos <code>.png</code>. Se
                             copian automáticamente a <code>BackgroundImages</code> de la versión seleccionada.</p>

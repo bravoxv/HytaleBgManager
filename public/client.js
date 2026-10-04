@@ -351,6 +351,21 @@ async function init() {
     btnAddVfx.addEventListener('click', addVfxEffect);
     btnApplyVfx.addEventListener('click', applyVfxChanges);
 
+    const btnRefreshPresets = document.getElementById('btn-refresh-presets');
+    if (btnRefreshPresets) {
+        btnRefreshPresets.addEventListener('click', async () => {
+            const original = btnRefreshPresets.textContent;
+            btnRefreshPresets.disabled = true;
+            btnRefreshPresets.textContent = '⏳';
+            await refreshTexturePresets();
+            btnRefreshPresets.textContent = '✅ Actualizado';
+            setTimeout(() => {
+                btnRefreshPresets.textContent = original;
+                btnRefreshPresets.disabled = false;
+            }, 1500);
+        });
+    }
+
     if (btnRestoreOriginals) {
         btnRestoreOriginals.addEventListener('click', async () => {
             const t = translations[currentLang] || translations['es'];
