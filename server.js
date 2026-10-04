@@ -1284,6 +1284,56 @@ app.post('/api/apply-images-from-source', (req, res) => {
   res.json({ success: true, copied, failed, texturesDir });
 });
 
+// POST /api/remove-images-from-source — borra de BackgroundImages SOLO los archivos que están en la carpeta del usuario
+// Protege las imágenes originales de Hytale: solo elimina lo que el usuario puso
+app.post('/api/remove-images-from-source', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  const cfg = loadConfig();
+  const sourcePath = cfg.imagesSourcePath || null;
+
+  if (!sourcePath) {
+    return res.json({ success: false, error: 'No hay carpeta de imágenes configurada' });
+  }
+  if (!fs.existsSync(sourcePath)) {
+    return res.json({ success: false, error: 'La carpeta ya no existe: ' + sourcePath });
+  }
+
+  const { texturesDir } = getPathsForVersion(version);
+  if (!texturesDir || !fs.existsSync(texturesDir)) {
+    return res.json({ success: false, error: 'No se encontró la carpeta BackgroundImages de Hytale' });
+  }
+
+  let sourceFiles;
+  try {
+    sourceFiles = fs.readdirSync(sourcePath).filter(f => f.toLowerCase().endsWith('.png'));
+  } catch (e) {
+    return res.json({ success: false, error: 'No se pudo leer la carpeta fuente: ' + e.message });
+  }
+
+  if (sourceFiles.length === 0) {
+    return res.json({ success: false, error: 'No hay archivos PNG en la carpeta fuente' });
+  }
+
+  const removed = [], notFound = [], failed = [];
+
+  for (const file of sourceFiles) {
+    const destFile = path.join(texturesDir, file);
+    if (!fs.existsSync(destFile)) {
+      notFound.push(file);
+      continue;
+    }
+    try {
+      fs.unlinkSync(destFile);
+      removed.push(file);
+    } catch (e) {
+      failed.push({ file, error: e.message });
+    }
+  }
+
+  console.log(`[ImagesSource] Eliminados: ${removed.length}/${sourceFiles.length} de ${texturesDir}`);
+  res.json({ success: true, removed, notFound, failed });
+});
+
 // Upload PNG image
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

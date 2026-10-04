@@ -60,6 +60,7 @@
                 <div class="editor-header">
                     <h2 data-i18n="editingBackground">Editor de Fondo</h2>
                     <div class="header-actions">
+                        <button id="btn-help-validation" title="¿Ves un error de validación en Hytale? Haz clic para ver cómo solucionarlo" style="background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.35); color:#fbbf24; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:0.9rem; font-weight:700; transition:all 0.2s;">❓ Ayuda</button>
                         <button id="btn-restore-originals" class="btn btn-restore" data-i18n="restoreOriginalsBtn"
                             title="¿Salió una nueva versión de Hytale? Usá este botón ANTES de actualizar para devolver los archivos del juego a su estado original. Así el launcher no los detecta como corruptos y la actualización sale sin problemas.">
                             🔄 Restaurar archivos originales del juego
@@ -158,6 +159,9 @@
                             <span id="images-source-path-display" style="flex:1; font-size:0.85rem; color:#c4b5fd; font-family:monospace; word-break:break-all;"></span>
                             <button id="btn-images-source-apply" class="btn" style="white-space:nowrap; padding:8px 16px; background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; border:none; border-radius:6px; font-weight:700; cursor:pointer; transition:filter 0.2s; flex-shrink:0;" data-i18n="imagesSourceApplyBtn">
                                 ▶️ Aplicar imágenes
+                            </button>
+                            <button id="btn-images-source-remove" class="btn" title="Elimina del juego solo las imágenes que están en tu carpeta (no borra las originales de Hytale)" style="white-space:nowrap; padding:8px 14px; background:rgba(220,38,38,0.15); color:#fca5a5; border:1px solid rgba(220,38,38,0.35); border-radius:6px; font-weight:600; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                                🗑️ Quitar del juego
                             </button>
                         </div>
                         <p id="images-source-apply-msg" class="help-text hidden" style="margin-top:8px; font-size:0.8rem;"></p>
@@ -309,6 +313,49 @@
     </main>
 
     <div id="toast" class="toast hidden"></div>
+
+    <!-- Modal: Ayuda para error de validación de Hytale -->
+    <div id="modal-help-validation" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.75); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+        <div style="background:#0f172a; border:1px solid rgba(251,191,36,0.35); border-radius:14px; padding:28px 32px; max-width:560px; width:92%; position:relative; box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+            <!-- Cerrar -->
+            <button id="modal-help-close" style="position:absolute; top:12px; right:14px; background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; line-height:1;">✕</button>
+
+            <h2 style="margin:0 0 6px 0; font-size:1.15rem; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+                ⚠️ <span>¿El juego muestra un error de validación?</span>
+            </h2>
+            <p style="font-size:0.82rem; color:#64748b; margin:0 0 20px 0; font-style:italic;">/ Game file validation failed?</p>
+
+            <!-- Opción 1: Restaurar desde la app -->
+            <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:10px; padding:16px 18px; margin-bottom:14px;">
+                <p style="margin:0 0 8px 0; font-weight:700; color:#34d399; font-size:0.95rem;">✅ Opción 1 — Desde esta app <em style="font-size:0.8rem; color:#64748b;">(recomendado / recommended)</em></p>
+                <p style="margin:0; font-size:0.88rem; color:#cbd5e1; line-height:1.6;">
+                    Hacé clic en el botón <strong style="color:#fbbf24;">🔄 Restaurar archivos originales del juego</strong> que está arriba en esta pantalla.<br>
+                    <span style="color:#64748b; font-size:0.82rem;">Click the <strong>🔄 Restore original game files</strong> button at the top of this screen.</span>
+                </p>
+            </div>
+
+            <!-- Opción 2: Desde el launcher de Hytale -->
+            <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:10px; padding:16px 18px;">
+                <p style="margin:0 0 10px 0; font-weight:700; color:#818cf8; font-size:0.95rem;">🔁 Opción 2 — Desde el launcher de Hytale <em style="font-size:0.8rem; color:#64748b;">(si la opción 1 no funciona)</em></p>
+                <ol style="margin:0; padding-left:20px; font-size:0.88rem; color:#cbd5e1; line-height:2;">
+                    <li>Abrí el launcher de Hytale <span style="color:#64748b;">/ Open the Hytale launcher</span></li>
+                    <li>Andá a <strong>Configuración → Manage Versions</strong></li>
+                    <li>Buscá tu versión instalada <em style="color:#64748b;">(ej: pre-release / release)</em></li>
+                    <li>Hacé clic en <strong style="color:#f87171;">UNINSTALL</strong> / Desinstalar</li>
+                    <li>Volvé a instalar la versión desde el launcher</li>
+                    <li>Abrí esta app y guardá tus cambios para volver a personalizar</li>
+                </ol>
+                <p style="margin:8px 0 0 0; font-size:0.8rem; color:#64748b; line-height:1.5;">
+                    EN: Open launcher → Settings → Manage Versions → find your version → UNINSTALL → reinstall → reopen this app and save.
+                </p>
+            </div>
+
+            <div style="margin-top:18px; text-align:center;">
+                <button id="modal-help-restore-btn" class="btn btn-restore" style="padding:9px 22px;">🔄 Restaurar archivos originales ahora</button>
+            </div>
+        </div>
+    </div>
+
     <script src="client.js"></script>
 </body>
 

@@ -423,6 +423,9 @@ async function init() {
 
     // Inicializar el card de carpeta de imágenes
     await loadImagesSourceCard();
+
+    // Inicializar modal de ayuda para error de validación
+    initHelpValidationModal();
 }
 
 // ── Card de Carpeta de Imágenes PNG del usuario ────────────────────────────
@@ -564,6 +567,78 @@ async function loadImagesSourceCard() {
             applyMsg.classList.remove('hidden');
         }
     });
+
+    // Botón Quitar del juego (borrado inteligente: solo los archivos de la carpeta del usuario)
+    const removeBtn = document.getElementById('btn-images-source-remove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', async () => {
+            const confirmed = confirm(
+                '¿Eliminar del juego las imágenes de tu carpeta?\n\n' +
+                'Solo se borrarán los archivos que vos pusiste (los que están en tu carpeta fuente).\n' +
+                'Las imágenes originales de Hytale NO se verán afectadas.\n\n' +
+                '¿Continuar?'
+            );
+            if (!confirmed) return;
+
+            removeBtn.disabled = true;
+            removeBtn.textContent = '⏳ Quitando...';
+            applyMsg.classList.add('hidden');
+
+            try {
+                const res = await fetch(`/api/remove-images-from-source?version=${encodeURIComponent(currentVersion)}`, {
+                    method: 'POST'
+                }).then(r => r.json());
+
+                removeBtn.disabled = false;
+                removeBtn.textContent = '🗑️ Quitar del juego';
+
+                if (res.success) {
+                    const cnt = res.removed ? res.removed.length : 0;
+                    applyMsg.textContent = `🗑️ ${cnt} imagen(es) eliminada(s) del juego.` + (res.notFound && res.notFound.length > 0 ? ` (${res.notFound.length} ya no estaban)` : '');
+                    applyMsg.style.color = cnt > 0 ? '#f87171' : '#94a3b8';
+                    applyMsg.classList.remove('hidden');
+                    if (cnt > 0) await refreshTexturePresets();
+                } else {
+                    applyMsg.textContent = '❌ ' + res.error;
+                    applyMsg.style.color = '#f87171';
+                    applyMsg.classList.remove('hidden');
+                }
+            } catch (e) {
+                removeBtn.disabled = false;
+                removeBtn.textContent = '🗑️ Quitar del juego';
+                applyMsg.textContent = '❌ Error de conexión.';
+                applyMsg.style.color = '#f87171';
+                applyMsg.classList.remove('hidden');
+            }
+        });
+    }
+}
+
+// ── Modal de ayuda: error de validación de Hytale ─────────────────────────────
+function initHelpValidationModal() {
+    const modal   = document.getElementById('modal-help-validation');
+    const openBtn = document.getElementById('btn-help-validation');
+    const closeBtn= document.getElementById('modal-help-close');
+    const restoreBtn = document.getElementById('modal-help-restore-btn');
+    if (!modal || !openBtn) return;
+
+    function openModal()  { modal.style.display = 'flex'; }
+    function closeModal() { modal.style.display = 'none'; }
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    // Cerrar al hacer clic fuera del panel
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    // Botón de restaurar dentro del modal — llama al mismo flujo del botón principal
+    if (restoreBtn) {
+        restoreBtn.addEventListener('click', async () => {
+            closeModal();
+            const btn = document.getElementById('btn-restore-originals');
+            if (btn) btn.click();
+        });
+    }
 }
 
 async function loadVersions() {
