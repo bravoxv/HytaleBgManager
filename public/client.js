@@ -1037,6 +1037,8 @@ function addVfxEffect() {
 
 function initPreviewModal() {
     const closeButton = document.getElementById('btn-close-preview');
+    const previewResizeObserver = new ResizeObserver(renderPreviewScene);
+    previewResizeObserver.observe(previewCanvas);
     const openModal = () => {
         previewModal.style.display = 'flex';
         renderPreviewScene();
@@ -1087,7 +1089,10 @@ function renderPreviewScene() {
 
     if (previewImage.dataset.src !== imageUrl) {
         previewImage.dataset.src = imageUrl;
-        previewImage.onload = () => { previewPlaceholder.classList.add('hidden'); };
+        previewImage.onload = () => {
+            previewPlaceholder.classList.add('hidden');
+            renderPreviewScene();
+        };
         previewImage.onerror = () => {
             previewPlaceholder.textContent = (translations[currentLang] || translations.es).previewImageUnavailable;
             previewPlaceholder.classList.remove('hidden');
@@ -1097,6 +1102,17 @@ function renderPreviewScene() {
     }
 
     const particles = bg && Array.isArray(bg.Vfx) ? bg.Vfx : [];
+    const canvasWidth = previewCanvas.clientWidth;
+    const canvasHeight = previewCanvas.clientHeight;
+    const sourceWidth = previewImage.naturalWidth || canvasWidth;
+    const sourceHeight = previewImage.naturalHeight || canvasHeight;
+    const fitScale = canvasWidth && canvasHeight && sourceWidth && sourceHeight
+        ? Math.min(canvasWidth / sourceWidth, canvasHeight / sourceHeight)
+        : 0;
+    const imageWidth = sourceWidth * fitScale;
+    const imageHeight = sourceHeight * fitScale;
+    const imageLeft = (canvasWidth - imageWidth) / 2;
+    const imageTop = (canvasHeight - imageHeight) / 2;
     previewCanvas.querySelectorAll('.particle-marker-box').forEach(marker => marker.remove());
     previewParticleList.innerHTML = '';
     if (!particles.length) {
@@ -1120,9 +1136,9 @@ function renderPreviewScene() {
         const marker = document.createElement('button');
         marker.type = 'button';
         marker.className = `particle-marker-box${index === selectedPreviewParticle ? ' selected' : ''}`;
-        marker.style.left = `${Math.max(0, Math.min(100, x * 100))}%`;
-        marker.style.top = `${Math.max(0, Math.min(100, y * 100))}%`;
-        marker.style.width = `${width}%`;
+        marker.style.left = `${imageLeft + Math.max(0, Math.min(1, x)) * imageWidth}px`;
+        marker.style.top = `${imageTop + Math.max(0, Math.min(1, y)) * imageHeight}px`;
+        marker.style.width = `${imageWidth * width / 100}px`;
         marker.style.aspectRatio = '1.4 / 1';
         marker.setAttribute('aria-label', particle.SystemId || `Particle ${index + 1}`);
         const markerLabel = document.createElement('span');
