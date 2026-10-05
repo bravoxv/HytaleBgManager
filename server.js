@@ -1044,6 +1044,40 @@ app.get('/api/textures', (req, res) => {
   }
 });
 
+// Endpoint para servir una imagen de textura de forma segura para la preview
+app.get('/api/texture-file', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  const fileName = req.query.file;
+  if (!fileName) return res.status(400).send('Archivo no especificado');
+
+  // Limpiar posibles prefijos tipo "Textures/BackgroundImages/"
+  const cleanName = path.basename(fileName);
+  if (!cleanName.toLowerCase().endsWith('.png')) {
+    return res.status(400).send('Solo se permiten imágenes PNG');
+  }
+
+  const { texturesDir } = getPathsForVersion(version);
+  const filePath = path.join(texturesDir, cleanName);
+  res.setHeader('Cache-Control', 'no-store');
+
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Content-Type', 'image/png');
+    return res.sendFile(filePath);
+  }
+
+  // Si no está en texturesDir, verificar en la carpeta externa de imágenes del usuario si está configurada
+  const cfg = loadConfig();
+  if (cfg.imagesSourcePath && fs.existsSync(cfg.imagesSourcePath)) {
+    const srcFilePath = path.join(cfg.imagesSourcePath, cleanName);
+    if (fs.existsSync(srcFilePath)) {
+      res.setHeader('Content-Type', 'image/png');
+      return res.sendFile(srcFilePath);
+    }
+  }
+
+  return res.status(404).send('Imagen no encontrada');
+});
+
 app.post('/api/open-folder', (req, res) => {
   const version = req.query.version || 'pre-release';
   const { texturesDir } = getPathsForVersion(version);
