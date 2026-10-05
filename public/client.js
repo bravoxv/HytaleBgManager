@@ -44,7 +44,41 @@ const translations = {
         restoreOriginalsBtn: "🔄 Restaurar archivos originales del juego",
         restoreOriginalsConfirm: "¿Salió una nueva versión de Hytale?\n\nEste botón devuelve los archivos del juego a su estado original para que el launcher no los detecte como corruptos al actualizar.\n\nDespués de actualizar Hytale, abrí esta app y guardá los cambios para volver a aplicar tu personalización.\n\n¿Continuar?",
         restoreOriginalsOk: "✅ Archivos del juego restaurados. Ahora podés actualizar Hytale sin problemas.",
-        restoreOriginalsError: "Error al restaurar los archivos del juego."
+        restoreOriginalsError: "Error al restaurar los archivos del juego.",
+        imagesSourceTitle: "Carpeta de mis imágenes PNG",
+        imagesSourceHelp: "Guardá tus PNGs en una carpeta propia fuera del juego. La app los copiará a BackgroundImages cuando sea necesario — si Hytale los borra al actualizar, hacé clic en Aplicar imágenes para restaurarlos sin tener que subirlos de nuevo.",
+        imagesSourceSaveBtn: "💾 Guardar y aplicar",
+        imagesSourceApplyBtn: "▶️ Aplicar imágenes",
+        imagesSourceRemoveBtn: "🗑️ Quitar del juego",
+        imagesSourceRemoveTitle: "Elimina del juego solo las imágenes que están en tu carpeta (no borra las originales de Hytale)",
+        imagesSourceRemoveConfirm: "¿Eliminar del juego las imágenes de tu carpeta?\n\nSolo se borrarán los archivos que vos pusiste (los que están en tu carpeta fuente).\nLas imágenes originales de Hytale NO se verán afectadas.\n\n¿Continuar?",
+        imagesSourceRemoveDone: "imagen(es) eliminada(s) del juego.",
+        imagesSourceGearTitle: "Cambiar carpeta de imágenes",
+        helpBtnLabel: "❓ Ayuda",
+        helpBtnTitle: "¿Ves un error de validación en Hytale? Haz clic para ver cómo solucionarlo",
+        restoreOriginalsTooltip: "¿Salió una nueva versión de Hytale? Usá este botón ANTES de actualizar para devolver los archivos del juego a su estado original. Así el launcher no los detecta como corruptos y la actualización sale sin problemas.",
+        clearPathTitle: "Limpiar ruta guardada",
+        openFolderTitle: "Abrir carpeta de texturas BackgroundImages",
+        refreshPresetsTitle: "Actualizar lista de imágenes disponibles",
+        refreshPresetsBtn: "🔄 Actualizar",
+        refreshPresetsDone: "✅ Actualizado",
+        badgeTextures: "Carpeta BackgroundImages",
+        statusChecking: "Comprobando...",
+        statusFilesFound: "✅ ¡Archivos necesarios encontrados!",
+        statusFilesNotFound: "⚠️ Archivos de Hytale no detectados en esta versión o ruta.",
+        statusScanning: "⏳ Buscando archivos recursivamente...",
+        helpModalTitle: "¿El juego muestra un error de validación?",
+        helpModalSubtitle: "/ Game file validation failed?",
+        helpModalOpt1Title: "✅ Opción 1 — Desde esta app (recomendado)",
+        helpModalOpt1Desc: "Hacé clic en el botón <strong>🔄 Restaurar archivos originales del juego</strong> que está arriba en esta pantalla.",
+        helpModalOpt2Title: "🔁 Opción 2 — Desde el launcher de Hytale (si la opción 1 no funciona)",
+        helpModalOpt2Step1: "Abrí el launcher de Hytale",
+        helpModalOpt2Step2: "Andá a <strong>Configuración → Manage Versions</strong>",
+        helpModalOpt2Step3: "Buscá tu versión instalada <em>(ej: pre-release / release)</em>",
+        helpModalOpt2Step4: "Hacé clic en <strong style=\"color:#f87171;\">UNINSTALL</strong> / Desinstalar",
+        helpModalOpt2Step5: "Volvé a instalar la versión desde el launcher",
+        helpModalOpt2Step6: "Abrí esta app y guardá tus cambios para volver a personalizar",
+        helpModalRestoreBtn: "🔄 Restaurar archivos originales ahora"
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -67,8 +101,9 @@ const translations = {
         avatarSectionTitle: "🧍 Menu Character (AvatarPreview)",
         avatarSectionHelp: "Hide or move the character on the main menu (HomePage.ui).",
         avatarPosTop: "Vertical Position (Top):", avatarPosLeft: "Horizontal Position (Left):",
-        avatarApply: "✅ Apply Character Position", avatarStatusText: "Status:",
+        avatarApply: "✅ Apply Character Position", avatarReset: "↺ Default", avatarStatusText: "Status:",
         avatarStatusVisible: "Visible", avatarStatusHidden: "Hidden (Width/Height: 0)",
+        toastAvatarApplied: "Character configuration saved and applied!",
         hytaleFolderTitle: "Hytale Installation Folder",
         hytaleFolderHelp: "Select or enter the folder where Hytale is installed. The tool will automatically locate required files (MainMenuBackgrounds.json, BackgroundImages, etc.).",
         scanFilesBtn: "🔍 Scan Files",
@@ -86,7 +121,41 @@ const translations = {
         restoreOriginalsBtn: "🔄 Restore original game files",
         restoreOriginalsConfirm: "Is a new version of Hytale available?\n\nThis button restores the game files to their original state so the launcher doesn't detect them as corrupted during the update.\n\nAfter updating Hytale, open this app and save your changes to re-apply your customization.\n\nContinue?",
         restoreOriginalsOk: "✅ Game files restored. You can now update Hytale without issues.",
-        restoreOriginalsError: "Error restoring game files."
+        restoreOriginalsError: "Error restoring game files.",
+        imagesSourceTitle: "My PNG Images Folder",
+        imagesSourceHelp: "Store your PNGs in a personal folder outside the game. The app will copy them to BackgroundImages when needed — if Hytale removes them after an update, click Apply Images to restore them without re-uploading.",
+        imagesSourceSaveBtn: "💾 Save and apply",
+        imagesSourceApplyBtn: "▶️ Apply images",
+        imagesSourceRemoveBtn: "🗑️ Remove from game",
+        imagesSourceRemoveTitle: "Removes from game only images in your folder (does not touch original Hytale images)",
+        imagesSourceRemoveConfirm: "Remove images in your folder from the game?\n\nOnly files you added (from your source folder) will be deleted.\nOriginal Hytale images will NOT be affected.\n\nContinue?",
+        imagesSourceRemoveDone: "image(s) removed from game.",
+        imagesSourceGearTitle: "Change images folder",
+        helpBtnLabel: "❓ Help",
+        helpBtnTitle: "Seeing a validation error in Hytale? Click to see how to fix it",
+        restoreOriginalsTooltip: "New Hytale version available? Use this button BEFORE updating to restore original game files so the launcher doesn't flag them as corrupted.",
+        clearPathTitle: "Clear saved path",
+        openFolderTitle: "Open BackgroundImages texture folder",
+        refreshPresetsTitle: "Refresh available images list",
+        refreshPresetsBtn: "🔄 Refresh",
+        refreshPresetsDone: "✅ Refreshed",
+        badgeTextures: "BackgroundImages Folder",
+        statusChecking: "Checking...",
+        statusFilesFound: "✅ Required files found!",
+        statusFilesNotFound: "⚠️ Hytale files not detected in this version or path.",
+        statusScanning: "⏳ Scanning files recursively...",
+        helpModalTitle: "Is the game showing a validation error?",
+        helpModalSubtitle: "/ Game file validation failed?",
+        helpModalOpt1Title: "✅ Option 1 — From this app (recommended)",
+        helpModalOpt1Desc: "Click the <strong>🔄 Restore original game files</strong> button at the top of this screen.",
+        helpModalOpt2Title: "🔁 Option 2 — From the Hytale launcher (if option 1 fails)",
+        helpModalOpt2Step1: "Open the Hytale launcher",
+        helpModalOpt2Step2: "Go to <strong>Settings → Manage Versions</strong>",
+        helpModalOpt2Step3: "Find your installed version <em>(e.g., pre-release / release)</em>",
+        helpModalOpt2Step4: "Click <strong style=\"color:#f87171;\">UNINSTALL</strong>",
+        helpModalOpt2Step5: "Reinstall the version from the launcher",
+        helpModalOpt2Step6: "Open this app and save your changes to customize again",
+        helpModalRestoreBtn: "🔄 Restore original files now"
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -96,7 +165,7 @@ const translations = {
         mainImageLabel: "Imagem Principal (Image):", blurredImageLabel: "Imagem Desfocada (BlurredImage):",
         selectFromFolder: "-- Selecionar --",
         newsSectionTitle: "📰 Cartões de Notícias (NewsTilesCarousel)",
-        newsSectionHelp: "Ocular ou mostrar o painel transparente de notícias no menu principal.",
+        newsSectionHelp: "Ocultar ou mostrar o painel transparente de notícias no menu principal.",
         newsStatusText: "Estado da config UI:", newsStatusVisible: "true (Visível)", newsStatusHidden: "false (Invisível / Oculto)",
         vfxTitle: "✨ Efeitos de Partículas (VFX)", vfxGuideLink: "🌐 Guia OrbisHytale",
         applyVfxChanges: "✅ Aplicar Partículas", addParticle: "+ Adicionar Partícula",
@@ -109,8 +178,9 @@ const translations = {
         avatarSectionTitle: "🧍 Personagem do Menu (AvatarPreview)",
         avatarSectionHelp: "Ocultar ou mover o personaje no menu principal (HomePage.ui).",
         avatarPosTop: "Posição Vertical (Top):", avatarPosLeft: "Posição Horizontal (Left):",
-        avatarApply: "✅ Aplicar Posição do Personagem", avatarStatusText: "Estado:",
+        avatarApply: "✅ Aplicar Posição do Personagem", avatarReset: "↺ Padrão", avatarStatusText: "Estado:",
         avatarStatusVisible: "Visível", avatarStatusHidden: "Oculto (Width/Height: 0)",
+        toastAvatarApplied: "Configuração do personagem salva e aplicada!",
         hytaleFolderTitle: "Pasta de Instalação do Hytale",
         hytaleFolderHelp: "Selecione ou insira a pasta onde o Hytale está instalado. O programa buscará automaticamente os arquivos necessários (MainMenuBackgrounds.json, BackgroundImages, etc.).",
         scanFilesBtn: "🔍 Procurar Arquivos",
@@ -128,7 +198,41 @@ const translations = {
         restoreOriginalsBtn: "🔄 Restaurar arquivos originais do jogo",
         restoreOriginalsConfirm: "Uma nova versão do Hytale foi lançada?\n\nEste botão restaura os arquivos do jogo ao estado original para que o launcher não os detecte como corrompidos ao atualizar.\n\nApós atualizar o Hytale, abra este app e salve as alterações para reaplicar sua personalização.\n\nContinuar?",
         restoreOriginalsOk: "✅ Arquivos do jogo restaurados. Agora você pode atualizar o Hytale sem problemas.",
-        restoreOriginalsError: "Erro ao restaurar os arquivos do jogo."
+        restoreOriginalsError: "Erro ao restaurar os arquivos do jogo.",
+        imagesSourceTitle: "Minha pasta de imagens PNG",
+        imagesSourceHelp: "Guarde seus PNGs em uma pasta pessoal fora do jogo. O app os copiará para BackgroundImages quando necessário — se o Hytale os remover ao atualizar, clique em Aplicar imagens para restaurá-los sem precisar reenviá-los.",
+        imagesSourceSaveBtn: "💾 Salvar e aplicar",
+        imagesSourceApplyBtn: "▶️ Aplicar imagens",
+        imagesSourceRemoveBtn: "🗑️ Remover do jogo",
+        imagesSourceRemoveTitle: "Remove do jogo apenas as imagens da sua pasta (não afeta as originais do Hytale)",
+        imagesSourceRemoveConfirm: "Remover do jogo as imagens da sua pasta?\n\nApenas os arquivos adicionados por você serão excluídos.\nAs imagens originais do Hytale NÃO serão afetadas.\n\nContinuar?",
+        imagesSourceRemoveDone: "imagem(ns) removida(s) do jogo.",
+        imagesSourceGearTitle: "Alterar pasta de imagens",
+        helpBtnLabel: "❓ Ajuda",
+        helpBtnTitle: "Vendo um erro de validação no Hytale? Clique para ver como resolver",
+        restoreOriginalsTooltip: "Saiu uma nova versão do Hytale? Use este botão ANTES de atualizar para restaurar os arquivos originais e evitar erros no launcher.",
+        clearPathTitle: "Limpar caminho salvo",
+        openFolderTitle: "Abrir pasta de texturas BackgroundImages",
+        refreshPresetsTitle: "Atualizar lista de imagens disponíveis",
+        refreshPresetsBtn: "🔄 Atualizar",
+        refreshPresetsDone: "✅ Atualizado",
+        badgeTextures: "Pasta BackgroundImages",
+        statusChecking: "Verificando...",
+        statusFilesFound: "✅ Arquivos necessários encontrados!",
+        statusFilesNotFound: "⚠️ Arquivos do Hytale não detectados nesta versão ou caminho.",
+        statusScanning: "⏳ Procurando arquivos recursivamente...",
+        helpModalTitle: "O jogo mostra um erro de validação?",
+        helpModalSubtitle: "/ Game file validation failed?",
+        helpModalOpt1Title: "✅ Opção 1 — A partir deste app (recomendado)",
+        helpModalOpt1Desc: "Clique no botão <strong>🔄 Restaurar arquivos originais do jogo</strong> no topo desta tela.",
+        helpModalOpt2Title: "🔁 Opção 2 — Pelo inicializador do Hytale (se a opção 1 não funcionar)",
+        helpModalOpt2Step1: "Abra o inicializador do Hytale",
+        helpModalOpt2Step2: "Vá em <strong>Configurações → Manage Versions</strong>",
+        helpModalOpt2Step3: "Encontre sua versão instalada <em>(ex: pre-release / release)</em>",
+        helpModalOpt2Step4: "Clique em <strong style=\"color:#f87171;\">UNINSTALL</strong> / Desinstalar",
+        helpModalOpt2Step5: "Reinstale a versão a partir do inicializador",
+        helpModalOpt2Step6: "Abra este aplicativo e salve suas alterações para personalizar novamente",
+        helpModalRestoreBtn: "🔄 Restaurar arquivos originais agora"
     }
 };
 
@@ -348,11 +452,12 @@ async function init() {
     const btnRefreshPresets = document.getElementById('btn-refresh-presets');
     if (btnRefreshPresets) {
         btnRefreshPresets.addEventListener('click', async () => {
-            const original = btnRefreshPresets.textContent;
+            const t = translations[currentLang] || translations['es'];
+            const original = t.refreshPresetsBtn || '🔄 Actualizar';
             btnRefreshPresets.disabled = true;
             btnRefreshPresets.textContent = '⏳';
             await refreshTexturePresets();
-            btnRefreshPresets.textContent = '✅ Actualizado';
+            btnRefreshPresets.textContent = t.refreshPresetsDone || '✅ Actualizado';
             setTimeout(() => {
                 btnRefreshPresets.textContent = original;
                 btnRefreshPresets.disabled = false;
@@ -572,16 +677,18 @@ async function loadImagesSourceCard() {
     const removeBtn = document.getElementById('btn-images-source-remove');
     if (removeBtn) {
         removeBtn.addEventListener('click', async () => {
+            const t = translations[currentLang] || translations['es'];
             const confirmed = confirm(
-                '¿Eliminar del juego las imágenes de tu carpeta?\n\n' +
+                t.imagesSourceRemoveConfirm ||
+                ('¿Eliminar del juego las imágenes de tu carpeta?\n\n' +
                 'Solo se borrarán los archivos que vos pusiste (los que están en tu carpeta fuente).\n' +
                 'Las imágenes originales de Hytale NO se verán afectadas.\n\n' +
-                '¿Continuar?'
+                '¿Continuar?')
             );
             if (!confirmed) return;
 
             removeBtn.disabled = true;
-            removeBtn.textContent = '⏳ Quitando...';
+            removeBtn.textContent = '⏳...';
             applyMsg.classList.add('hidden');
 
             try {
@@ -590,11 +697,11 @@ async function loadImagesSourceCard() {
                 }).then(r => r.json());
 
                 removeBtn.disabled = false;
-                removeBtn.textContent = '🗑️ Quitar del juego';
+                removeBtn.textContent = t.imagesSourceRemoveBtn || '🗑️ Quitar del juego';
 
                 if (res.success) {
                     const cnt = res.removed ? res.removed.length : 0;
-                    applyMsg.textContent = `🗑️ ${cnt} imagen(es) eliminada(s) del juego.` + (res.notFound && res.notFound.length > 0 ? ` (${res.notFound.length} ya no estaban)` : '');
+                    applyMsg.textContent = `🗑️ ${cnt} ` + (t.imagesSourceRemoveDone || 'imagen(es) eliminada(s) del juego.') + (res.notFound && res.notFound.length > 0 ? ` (${res.notFound.length})` : '');
                     applyMsg.style.color = cnt > 0 ? '#f87171' : '#94a3b8';
                     applyMsg.classList.remove('hidden');
                     if (cnt > 0) await refreshTexturePresets();
@@ -605,8 +712,8 @@ async function loadImagesSourceCard() {
                 }
             } catch (e) {
                 removeBtn.disabled = false;
-                removeBtn.textContent = '🗑️ Quitar del juego';
-                applyMsg.textContent = '❌ Error de conexión.';
+                removeBtn.textContent = t.imagesSourceRemoveBtn || '🗑️ Quitar del juego';
+                applyMsg.textContent = '❌ ' + (t.toastError || 'Error');
                 applyMsg.style.color = '#f87171';
                 applyMsg.classList.remove('hidden');
             }
@@ -663,12 +770,17 @@ async function loadVersions() {
 }
 
 function updateLanguageUI() {
-    const t = translations[currentLang];
+    const t = translations[currentLang] || translations['es'];
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (!t[key]) return;
-        if ((el.tagName === 'INPUT') && el.placeholder !== undefined) el.placeholder = t[key];
-        else el.textContent = t[key];
+        if (el.tagName === 'INPUT' && el.placeholder !== undefined) el.placeholder = t[key];
+        else if (el.tagName === 'OPTION') el.textContent = t[key];
+        else el.innerHTML = t[key];
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (t[key]) el.title = t[key];
     });
     updateNewsLabel(chkNewsVisible.checked);
 }
@@ -682,7 +794,7 @@ async function loadNewsStatus() {
 }
 
 function updateNewsLabel(isVisible) {
-    const t = translations[currentLang];
+    const t = translations[currentLang] || translations['es'];
     if (isVisible) {
         newsStatusLabel.textContent = t.newsStatusVisible;
         newsStatusLabel.style.color = '#10b981';
@@ -720,7 +832,7 @@ async function loadAvatarStatus() {
 }
 
 function updateAvatarLabel(isVisible, top, left) {
-    const t = translations[currentLang];
+    const t = translations[currentLang] || translations['es'];
     if (isVisible) {
         avatarStatusLabel.textContent = `${t.avatarStatusVisible} (Top: ${top}, Left: ${left})`;
         avatarStatusLabel.style.color = '#10b981';
@@ -797,7 +909,7 @@ async function loadData() {
 async function refreshTexturePresets() {
     const res = await fetch(`/api/textures?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
     if (!res.success) return;
-    const t = translations[currentLang];
+    const t = translations[currentLang] || translations['es'];
     const emptyOpt = `<option value="">${t.selectFromFolder}</option>`;
     selectImgPreset.innerHTML = emptyOpt;
     selectBlurPreset.innerHTML = emptyOpt;
@@ -830,7 +942,7 @@ function updateCurrentBgFromInputs() {
 }
 
 function renderVfxList(vfxArray) {
-    const t = translations[currentLang];
+    const t = translations[currentLang] || translations['es'];
     vfxListEl.innerHTML = '';
     if (!vfxArray.length) {
         vfxListEl.innerHTML = `<p class="help-text" style="text-align:center;margin:15px 0;">${t.noVfxYet}</p>`;
@@ -899,7 +1011,7 @@ async function handleFileUpload(e) {
         fileUpload.value = '';
         return;
     }
-    const t = translations[currentLang];
+    const t = translations[currentLang] || translations['es'];
     showToast(t.toastUploading);
 
     const formData = new FormData();
@@ -966,6 +1078,7 @@ const badgeHomepage = document.getElementById('badge-homepage');
 
 function updateFileBadges(detected, details = {}) {
     if (!badgeJson) return;
+    const t = translations[currentLang] || translations['es'];
 
     function setBadge(el, name, found) {
         if (!el) return;
@@ -988,16 +1101,16 @@ function updateFileBadges(detected, details = {}) {
     const hasHome = !!(details.homePagePath && (details.homePagePathExists !== undefined ? details.homePagePathExists : true));
 
     setBadge(badgeJson, 'MainMenuBackgrounds.json', hasJson && detected);
-    setBadge(badgeTextures, 'Carpeta BackgroundImages', hasTextures && detected);
+    setBadge(badgeTextures, t.badgeTextures || 'Carpeta BackgroundImages', hasTextures && detected);
     setBadge(badgeNews, 'NewsTilesCarousel.ui', hasNews && detected);
     setBadge(badgeHomepage, 'HomePage.ui', hasHome && detected);
 
     if (linuxStatusSummary) {
         if (detected && hasJson) {
-            linuxStatusSummary.textContent = '✅ ¡Archivos necesarios encontrados!';
+            linuxStatusSummary.textContent = t.statusFilesFound || '✅ ¡Archivos necesarios encontrados!';
             linuxStatusSummary.style.color = '#10b981';
         } else {
-            linuxStatusSummary.textContent = '⚠️ Archivos de Hytale no detectados en esta versión o ruta.';
+            linuxStatusSummary.textContent = t.statusFilesNotFound || '⚠️ Archivos de Hytale no detectados en esta versión o ruta.';
             linuxStatusSummary.style.color = '#f59e0b';
         }
     }
@@ -1031,6 +1144,7 @@ async function checkLinuxHytaleStatus() {
 }
 
 async function performLinuxPathSearch(pathValue) {
+    const t = translations[currentLang] || translations['es'];
     const p = (pathValue || (linuxFolderInput ? linuxFolderInput.value : '')).trim();
     if (!p) {
         showToast('Ingresa una ruta para buscar', true);
@@ -1038,7 +1152,7 @@ async function performLinuxPathSearch(pathValue) {
     }
 
     if (linuxStatusSummary) {
-        linuxStatusSummary.textContent = '⏳ Buscando archivos recursivamente...';
+        linuxStatusSummary.textContent = t.statusScanning || '⏳ Buscando archivos recursivamente...';
         linuxStatusSummary.style.color = '#38bdf8';
     }
 

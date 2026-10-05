@@ -60,8 +60,8 @@
                 <div class="editor-header">
                     <h2 data-i18n="editingBackground">Editor de Fondo</h2>
                     <div class="header-actions">
-                        <button id="btn-help-validation" title="¿Ves un error de validación en Hytale? Haz clic para ver cómo solucionarlo" style="background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.35); color:#fbbf24; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:0.9rem; font-weight:700; transition:all 0.2s;">❓ Ayuda</button>
-                        <button id="btn-restore-originals" class="btn btn-restore" data-i18n="restoreOriginalsBtn"
+                        <button id="btn-help-validation" data-i18n="helpBtnLabel" data-i18n-title="helpBtnTitle" title="¿Ves un error de validación en Hytale? Haz clic para ver cómo solucionarlo" style="background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.35); color:#fbbf24; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:0.9rem; font-weight:700; transition:all 0.2s;">❓ Ayuda</button>
+                        <button id="btn-restore-originals" class="btn btn-restore" data-i18n="restoreOriginalsBtn" data-i18n-title="restoreOriginalsTooltip"
                             title="¿Salió una nueva versión de Hytale? Usá este botón ANTES de actualizar para devolver los archivos del juego a su estado original. Así el launcher no los detecta como corruptos y la actualización sale sin problemas.">
                             🔄 Restaurar archivos originales del juego
                         </button>
@@ -89,7 +89,7 @@
                         <button id="btn-linux-scan" class="btn btn-primary" style="white-space: nowrap; padding: 10px 18px;" data-i18n="scanFilesBtn">
                             🔍 Buscar Archivos
                         </button>
-                        <button id="btn-clear-path" class="btn btn-secondary" style="white-space: nowrap; padding: 10px 14px; opacity: 0.75;" title="Limpiar ruta guardada">
+                        <button id="btn-clear-path" class="btn btn-secondary" style="white-space: nowrap; padding: 10px 14px; opacity: 0.75;" data-i18n-title="clearPathTitle" title="Limpiar ruta guardada">
                             🗑️ Limpiar
                         </button>
                     </div>
@@ -132,7 +132,7 @@
                             <!-- Badge: cantidad de PNGs en la carpeta (visible cuando está configurado) -->
                             <span id="images-source-count-badge" class="hidden" style="font-size:0.75rem; background:rgba(124,58,237,0.2); color:#c4b5fd; padding:4px 10px; border-radius:12px; border:1px solid rgba(124,58,237,0.35); font-weight:600;"></span>
                             <!-- Botón engranaje para reconfigurar (visible cuando está configurado) -->
-                            <button id="btn-images-source-gear" class="hidden" title="Cambiar carpeta de imágenes" style="background:rgba(124,58,237,0.15); border:1px solid rgba(124,58,237,0.3); color:#a78bfa; border-radius:6px; padding:5px 9px; cursor:pointer; font-size:1rem; transition: all 0.2s;">⚙️</button>
+                            <button id="btn-images-source-gear" class="hidden" data-i18n-title="imagesSourceGearTitle" title="Cambiar carpeta de imágenes" style="background:rgba(124,58,237,0.15); border:1px solid rgba(124,58,237,0.3); color:#a78bfa; border-radius:6px; padding:5px 9px; cursor:pointer; font-size:1rem; transition: all 0.2s;">⚙️</button>
                         </div>
                     </div>
                     <p class="help-text" data-i18n="imagesSourceHelp">
@@ -160,7 +160,7 @@
                             <button id="btn-images-source-apply" class="btn" style="white-space:nowrap; padding:8px 16px; background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; border:none; border-radius:6px; font-weight:700; cursor:pointer; transition:filter 0.2s; flex-shrink:0;" data-i18n="imagesSourceApplyBtn">
                                 ▶️ Aplicar imágenes
                             </button>
-                            <button id="btn-images-source-remove" class="btn" title="Elimina del juego solo las imágenes que están en tu carpeta (no borra las originales de Hytale)" style="white-space:nowrap; padding:8px 14px; background:rgba(220,38,38,0.15); color:#fca5a5; border:1px solid rgba(220,38,38,0.35); border-radius:6px; font-weight:600; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                            <button id="btn-images-source-remove" class="btn" data-i18n="imagesSourceRemoveBtn" data-i18n-title="imagesSourceRemoveTitle" title="Elimina del juego solo las imágenes que están en tu carpeta (no borra las originales de Hytale)" style="white-space:nowrap; padding:8px 14px; background:rgba(220,38,38,0.15); color:#fca5a5; border:1px solid rgba(220,38,38,0.35); border-radius:6px; font-weight:600; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
                                 🗑️ Quitar del juego
                             </button>
                         </div>
@@ -174,10 +174,10 @@
                         <div class="card-header">
                             <h3 data-i18n="backgroundImagesTitle">🖼️ Imágenes del Fondo</h3>
                             <div style="display:flex; gap:6px; align-items:center;">
-                                <button id="btn-open-folder" class="btn btn-secondary btn-sm" title="Abrir carpeta de texturas BackgroundImages" style="padding:5px 9px; font-size:1rem;">
+                                <button id="btn-open-folder" class="btn btn-secondary btn-sm" data-i18n-title="openFolderTitle" title="Abrir carpeta de texturas BackgroundImages" style="padding:5px 9px; font-size:1rem;">
                                     📁
                                 </button>
-                                <button id="btn-refresh-presets" class="btn btn-secondary btn-sm" title="Actualizar lista de imágenes disponibles" style="padding:5px 10px; font-size:0.85rem;">
+                                <button id="btn-refresh-presets" class="btn btn-secondary btn-sm" data-i18n="refreshPresetsBtn" data-i18n-title="refreshPresetsTitle" title="Actualizar lista de imágenes disponibles" style="padding:5px 10px; font-size:0.85rem;">
                                     🔄 Actualizar
                                 </button>
                             </div>
@@ -215,7 +215,7 @@
                                     <h4 style="margin:0 0 4px 0; font-size:0.95rem; color:#f8fafc;"
                                         data-i18n="newsSectionTitle">📰 Tarjetas de Noticias (NewsTilesCarousel)</h4>
                                     <p class="help-text" style="margin:0;" data-i18n="newsSectionHelp">Oculta o muestra
-                                        el panel de noticias transparente en la pantalla principal.</p>
+                                         el panel de noticias transparente en la pantalla principal.</p>
                                 </div>
                                 <label class="switch"
                                     style="position:relative; display:inline-block; width:50px; height:26px;">
@@ -321,37 +321,33 @@
             <button id="modal-help-close" style="position:absolute; top:12px; right:14px; background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; line-height:1;">✕</button>
 
             <h2 style="margin:0 0 6px 0; font-size:1.15rem; color:#fbbf24; display:flex; align-items:center; gap:8px;">
-                ⚠️ <span>¿El juego muestra un error de validación?</span>
+                ⚠️ <span data-i18n="helpModalTitle">¿El juego muestra un error de validación?</span>
             </h2>
-            <p style="font-size:0.82rem; color:#64748b; margin:0 0 20px 0; font-style:italic;">/ Game file validation failed?</p>
+            <p data-i18n="helpModalSubtitle" style="font-size:0.82rem; color:#64748b; margin:0 0 20px 0; font-style:italic;">/ Game file validation failed?</p>
 
             <!-- Opción 1: Restaurar desde la app -->
             <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:10px; padding:16px 18px; margin-bottom:14px;">
-                <p style="margin:0 0 8px 0; font-weight:700; color:#34d399; font-size:0.95rem;">✅ Opción 1 — Desde esta app <em style="font-size:0.8rem; color:#64748b;">(recomendado / recommended)</em></p>
-                <p style="margin:0; font-size:0.88rem; color:#cbd5e1; line-height:1.6;">
-                    Hacé clic en el botón <strong style="color:#fbbf24;">🔄 Restaurar archivos originales del juego</strong> que está arriba en esta pantalla.<br>
-                    <span style="color:#64748b; font-size:0.82rem;">Click the <strong>🔄 Restore original game files</strong> button at the top of this screen.</span>
+                <p data-i18n="helpModalOpt1Title" style="margin:0 0 8px 0; font-weight:700; color:#34d399; font-size:0.95rem;">✅ Opción 1 — Desde esta app (recomendado)</p>
+                <p data-i18n="helpModalOpt1Desc" style="margin:0; font-size:0.88rem; color:#cbd5e1; line-height:1.6;">
+                    Hacé clic en el botón <strong style="color:#fbbf24;">🔄 Restaurar archivos originales del juego</strong> que está arriba en esta pantalla.
                 </p>
             </div>
 
             <!-- Opción 2: Desde el launcher de Hytale -->
             <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:10px; padding:16px 18px;">
-                <p style="margin:0 0 10px 0; font-weight:700; color:#818cf8; font-size:0.95rem;">🔁 Opción 2 — Desde el launcher de Hytale <em style="font-size:0.8rem; color:#64748b;">(si la opción 1 no funciona)</em></p>
+                <p data-i18n="helpModalOpt2Title" style="margin:0 0 10px 0; font-weight:700; color:#818cf8; font-size:0.95rem;">🔁 Opción 2 — Desde el launcher de Hytale (si la opción 1 no funciona)</p>
                 <ol style="margin:0; padding-left:20px; font-size:0.88rem; color:#cbd5e1; line-height:2;">
-                    <li>Abrí el launcher de Hytale <span style="color:#64748b;">/ Open the Hytale launcher</span></li>
-                    <li>Andá a <strong>Configuración → Manage Versions</strong></li>
-                    <li>Buscá tu versión instalada <em style="color:#64748b;">(ej: pre-release / release)</em></li>
-                    <li>Hacé clic en <strong style="color:#f87171;">UNINSTALL</strong> / Desinstalar</li>
-                    <li>Volvé a instalar la versión desde el launcher</li>
-                    <li>Abrí esta app y guardá tus cambios para volver a personalizar</li>
+                    <li data-i18n="helpModalOpt2Step1">Abrí el launcher de Hytale</li>
+                    <li data-i18n="helpModalOpt2Step2">Andá a <strong>Configuración → Manage Versions</strong></li>
+                    <li data-i18n="helpModalOpt2Step3">Buscá tu versión instalada <em>(ej: pre-release / release)</em></li>
+                    <li data-i18n="helpModalOpt2Step4">Hacé clic en <strong style="color:#f87171;">UNINSTALL</strong> / Desinstalar</li>
+                    <li data-i18n="helpModalOpt2Step5">Volvé a instalar la versión desde el launcher</li>
+                    <li data-i18n="helpModalOpt2Step6">Abrí esta app y guardá tus cambios para volver a personalizar</li>
                 </ol>
-                <p style="margin:8px 0 0 0; font-size:0.8rem; color:#64748b; line-height:1.5;">
-                    EN: Open launcher → Settings → Manage Versions → find your version → UNINSTALL → reinstall → reopen this app and save.
-                </p>
             </div>
 
             <div style="margin-top:18px; text-align:center;">
-                <button id="modal-help-restore-btn" class="btn btn-restore" style="padding:9px 22px;">🔄 Restaurar archivos originales ahora</button>
+                <button id="modal-help-restore-btn" class="btn btn-restore" data-i18n="helpModalRestoreBtn" style="padding:9px 22px;">🔄 Restaurar archivos originales ahora</button>
             </div>
         </div>
     </div>
