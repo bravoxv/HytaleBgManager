@@ -1,6 +1,7 @@
 let currentConfig = { Groups: [{ Backgrounds: [] }] };
 let currentVersion = 'pre-release';
 let currentLang = 'es';
+let selectedPreviewParticle = 0;
 
 const translations = {
     es: {
@@ -56,6 +57,10 @@ const translations = {
         imagesSourceGearTitle: "Cambiar carpeta de imágenes",
         helpBtnLabel: "❓ Ayuda",
         helpBtnTitle: "¿Ves un error de validación en Hytale? Haz clic para ver cómo solucionarlo",
+        previewBtnLabel: "◫ Preview", previewBtnTitle: "Previsualizar el fondo y las partículas",
+        previewTitle: "Vista previa del menú", previewNoImage: "Selecciona una imagen PNG para ver el fondo.",
+        previewLoading: "Cargando imagen...", previewImageUnavailable: "No se pudo cargar esta imagen. Comprueba que exista en BackgroundImages.",
+        previewParticlesTitle: "Partículas", previewNoParticles: "Agrega una partícula para editarla en la vista previa.",
         restoreOriginalsTooltip: "¿Salió una nueva versión de Hytale? Usá este botón ANTES de actualizar para devolver los archivos del juego a su estado original. Así el launcher no los detecta como corruptos y la actualización sale sin problemas.",
         clearPathTitle: "Limpiar ruta guardada",
         openFolderTitle: "Abrir carpeta de texturas BackgroundImages",
@@ -133,6 +138,10 @@ const translations = {
         imagesSourceGearTitle: "Change images folder",
         helpBtnLabel: "❓ Help",
         helpBtnTitle: "Seeing a validation error in Hytale? Click to see how to fix it",
+        previewBtnLabel: "◫ Preview", previewBtnTitle: "Preview the background and particles",
+        previewTitle: "Menu preview", previewNoImage: "Select a PNG image to preview the background.",
+        previewLoading: "Loading image...", previewImageUnavailable: "This image could not be loaded. Check that it exists in BackgroundImages.",
+        previewParticlesTitle: "Particles", previewNoParticles: "Add a particle to edit it in the preview.",
         restoreOriginalsTooltip: "New Hytale version available? Use this button BEFORE updating to restore original game files so the launcher doesn't flag them as corrupted.",
         clearPathTitle: "Clear saved path",
         openFolderTitle: "Open BackgroundImages texture folder",
@@ -210,6 +219,10 @@ const translations = {
         imagesSourceGearTitle: "Alterar pasta de imagens",
         helpBtnLabel: "❓ Ajuda",
         helpBtnTitle: "Vendo um erro de validação no Hytale? Clique para ver como resolver",
+        previewBtnLabel: "◫ Prévia", previewBtnTitle: "Visualizar o fundo e as partículas",
+        previewTitle: "Prévia do menu", previewNoImage: "Selecione uma imagem PNG para visualizar o fundo.",
+        previewLoading: "Carregando imagem...", previewImageUnavailable: "Não foi possível carregar esta imagem. Verifique se ela existe em BackgroundImages.",
+        previewParticlesTitle: "Partículas", previewNoParticles: "Adicione uma partícula para editá-la na prévia.",
         restoreOriginalsTooltip: "Saiu uma nova versão do Hytale? Use este botão ANTES de atualizar para restaurar os arquivos originais e evitar erros no launcher.",
         clearPathTitle: "Limpar caminho salvo",
         openFolderTitle: "Abrir pasta de texturas BackgroundImages",
@@ -247,6 +260,15 @@ const selectBlurPreset = document.getElementById('select-blurred-preset');
 const fileUpload = document.getElementById('file-upload');
 const btnSaveAll = document.getElementById('btn-save-all');
 const btnRestoreOriginals = document.getElementById('btn-restore-originals');
+const btnOpenPreview = document.getElementById('btn-open-preview');
+const previewModal = document.getElementById('modal-preview');
+const previewCanvas = document.getElementById('preview-canvas');
+const previewImage = document.getElementById('preview-bg-image');
+const previewPlaceholder = document.getElementById('preview-placeholder');
+const previewParticleList = document.getElementById('preview-particle-list');
+const previewInspector = document.getElementById('preview-inspector');
+const previewEmptySelection = document.getElementById('preview-empty-selection');
+const btnPreviewAddParticle = document.getElementById('btn-preview-add-particle');
 const btnAddVfx = document.getElementById('btn-add-vfx');
 const btnApplyVfx = document.getElementById('btn-apply-vfx');
 const vfxListEl = document.getElementById('vfx-list');
@@ -531,6 +553,7 @@ async function init() {
 
     // Inicializar modal de ayuda para error de validación
     initHelpValidationModal();
+    initPreviewModal();
 }
 
 // ── Card de Carpeta de Imágenes PNG del usuario ────────────────────────────
@@ -932,6 +955,7 @@ function renderForm() {
     imgNameInput.value = bg.Image || '';
     blurredInput.value = bg.BlurredImage || '';
     renderVfxList(bg.Vfx || []);
+    renderPreviewScene();
 }
 
 function updateCurrentBgFromInputs() {
@@ -939,6 +963,7 @@ function updateCurrentBgFromInputs() {
     if (!bg) return;
     bg.Image = imgNameInput.value.trim();
     bg.BlurredImage = blurredInput.value.trim();
+    renderPreviewScene();
 }
 
 function renderVfxList(vfxArray) {
@@ -946,8 +971,11 @@ function renderVfxList(vfxArray) {
     vfxListEl.innerHTML = '';
     if (!vfxArray.length) {
         vfxListEl.innerHTML = `<p class="help-text" style="text-align:center;margin:15px 0;">${t.noVfxYet}</p>`;
+        selectedPreviewParticle = 0;
+        renderPreviewScene();
         return;
     }
+    selectedPreviewParticle = Math.min(selectedPreviewParticle, vfxArray.length - 1);
     vfxArray.forEach((vfx, idx) => {
         const card = document.createElement('div');
         card.className = 'vfx-card';
@@ -980,14 +1008,22 @@ function renderVfxList(vfxArray) {
             input.addEventListener('input', e => {
                 const field = e.target.getAttribute('data-field');
                 vfxArray[idx][field] = e.target.type === 'number' ? (parseFloat(e.target.value) || 0) : e.target.value;
+                selectedPreviewParticle = idx;
+                renderPreviewScene();
             });
+        });
+        card.addEventListener('click', () => {
+            selectedPreviewParticle = idx;
+            renderPreviewScene();
         });
         card.querySelector('.btn-icon-danger').addEventListener('click', () => {
             vfxArray.splice(idx, 1);
+            selectedPreviewParticle = Math.min(selectedPreviewParticle, vfxArray.length - 1);
             renderVfxList(vfxArray);
         });
         vfxListEl.appendChild(card);
     });
+    renderPreviewScene();
 }
 
 function addVfxEffect() {
@@ -995,7 +1031,133 @@ function addVfxEffect() {
     if (!bg) return;
     if (!bg.Vfx) bg.Vfx = [];
     bg.Vfx.push({ SystemId: "Fireflies_GS", X: 0.5, Y: 0.5, Z: 10.0, Scale: 1.0 });
+    selectedPreviewParticle = bg.Vfx.length - 1;
     renderVfxList(bg.Vfx);
+}
+
+function initPreviewModal() {
+    const closeButton = document.getElementById('btn-close-preview');
+    const openModal = () => {
+        previewModal.style.display = 'flex';
+        renderPreviewScene();
+    };
+    const closeModal = () => { previewModal.style.display = 'none'; };
+
+    btnOpenPreview.addEventListener('click', openModal);
+    closeButton.addEventListener('click', closeModal);
+    btnPreviewAddParticle.addEventListener('click', addVfxEffect);
+    previewModal.addEventListener('click', event => {
+        if (event.target === previewModal) closeModal();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && previewModal.style.display === 'flex') closeModal();
+    });
+
+    previewInspector.querySelectorAll('[data-field]').forEach(input => {
+        input.addEventListener('input', () => {
+            const bg = getActiveBg();
+            const vfx = bg && bg.Vfx && bg.Vfx[selectedPreviewParticle];
+            if (!vfx) return;
+            const field = input.dataset.field;
+            vfx[field] = input.type === 'number' ? (parseFloat(input.value) || 0) : input.value;
+            const cardInput = vfxListEl.querySelectorAll('.vfx-card')[selectedPreviewParticle]
+                ?.querySelector(`[data-field="${field}"]`);
+            if (cardInput && cardInput !== input) cardInput.value = input.value;
+            renderPreviewScene();
+        });
+    });
+}
+
+function renderPreviewScene() {
+    if (!previewCanvas || !previewModal) return;
+    const t = translations[currentLang] || translations.es;
+    const bg = getActiveBg();
+    const imagePath = bg && bg.Image ? bg.Image.split(/[\\/]/).pop() : '';
+    const imageUrl = imagePath
+        ? `/api/texture-file?version=${encodeURIComponent(currentVersion)}&file=${encodeURIComponent(imagePath)}`
+        : '';
+
+    if (imageUrl && previewImage.complete && !previewImage.naturalWidth) {
+        previewPlaceholder.textContent = t.previewImageUnavailable;
+    } else if (!imageUrl) {
+        previewPlaceholder.textContent = t.previewNoImage;
+    } else if (!previewImage.complete) {
+        previewPlaceholder.textContent = t.previewLoading;
+    }
+
+    if (previewImage.dataset.src !== imageUrl) {
+        previewImage.dataset.src = imageUrl;
+        previewImage.onload = () => { previewPlaceholder.classList.add('hidden'); };
+        previewImage.onerror = () => {
+            previewPlaceholder.textContent = (translations[currentLang] || translations.es).previewImageUnavailable;
+            previewPlaceholder.classList.remove('hidden');
+        };
+        if (imageUrl) previewImage.src = imageUrl;
+        else previewImage.removeAttribute('src');
+    }
+
+    const particles = bg && Array.isArray(bg.Vfx) ? bg.Vfx : [];
+    previewCanvas.querySelectorAll('.particle-marker-box').forEach(marker => marker.remove());
+    previewParticleList.innerHTML = '';
+    if (!particles.length) {
+        previewParticleList.innerHTML = `<p class="preview-empty-selection">${translations[currentLang].previewNoParticles}</p>`;
+        previewInspector.classList.add('hidden');
+        previewEmptySelection.classList.remove('hidden');
+        return;
+    }
+
+    selectedPreviewParticle = Math.max(0, Math.min(selectedPreviewParticle, particles.length - 1));
+    previewInspector.classList.remove('hidden');
+    previewEmptySelection.classList.add('hidden');
+
+    particles.forEach((particle, index) => {
+        const x = Number.isFinite(Number(particle.X)) ? Number(particle.X) : 0.5;
+        const y = Number.isFinite(Number(particle.Y)) ? Number(particle.Y) : 0.5;
+        const z = Number.isFinite(Number(particle.Z)) ? Number(particle.Z) : 10;
+        const scale = Number.isFinite(Number(particle.Scale)) ? Math.abs(Number(particle.Scale)) : 1;
+        const depthFactor = Math.min(1.8, Math.max(0.35, 10 / Math.max(Math.abs(z), 0.1)));
+        const width = Math.min(42, Math.max(7, scale * depthFactor * 18));
+        const marker = document.createElement('button');
+        marker.type = 'button';
+        marker.className = `particle-marker-box${index === selectedPreviewParticle ? ' selected' : ''}`;
+        marker.style.left = `${Math.max(0, Math.min(100, x * 100))}%`;
+        marker.style.top = `${Math.max(0, Math.min(100, y * 100))}%`;
+        marker.style.width = `${width}%`;
+        marker.style.aspectRatio = '1.4 / 1';
+        marker.setAttribute('aria-label', particle.SystemId || `Particle ${index + 1}`);
+        const markerLabel = document.createElement('span');
+        markerLabel.className = 'particle-marker-tag';
+        markerLabel.textContent = particle.SystemId || `Particle ${index + 1}`;
+        marker.appendChild(markerLabel);
+        marker.addEventListener('click', () => {
+            selectedPreviewParticle = index;
+            renderPreviewScene();
+        });
+        previewCanvas.appendChild(marker);
+
+        const listItem = document.createElement('button');
+        listItem.type = 'button';
+        listItem.className = `preview-particle-item${index === selectedPreviewParticle ? ' selected' : ''}`;
+        const title = document.createElement('span');
+        title.className = 'preview-particle-title';
+        const name = document.createElement('span');
+        name.textContent = particle.SystemId || `Particle ${index + 1}`;
+        title.appendChild(name);
+        const details = document.createElement('span');
+        details.className = 'preview-particle-details';
+        details.textContent = `X ${x} · Y ${y} · Z ${z} · ${translations[currentLang].scaleLabel}: ${particle.Scale ?? 1}`;
+        listItem.append(title, details);
+        listItem.addEventListener('click', () => {
+            selectedPreviewParticle = index;
+            renderPreviewScene();
+        });
+        previewParticleList.appendChild(listItem);
+    });
+
+    const selected = particles[selectedPreviewParticle];
+    previewInspector.querySelectorAll('[data-field]').forEach(input => {
+        if (document.activeElement !== input) input.value = selected[input.dataset.field] ?? (input.dataset.field === 'Scale' ? 1 : 0);
+    });
 }
 
 async function applyVfxChanges() {
