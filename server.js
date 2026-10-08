@@ -36,6 +36,8 @@ function startupVersionCheck() {
         results[ver] = r;
         if (r.updated) {
           console.log(`[Startup] ¡Actualización detectada en ${ver}! Personalizaciones reaplicadas: ${r.reapplied}`);
+        } else if (r.requiresOriginalSnapshot) {
+          console.log(`[Startup] Nueva versión de ${ver}: espera guardar el perfil original.`);
         } else if (r.firstRun) {
           console.log(`[Startup] Primera detección de ${ver}: hash registrado y backups guardados.`);
         } else if (r.detected) {
@@ -52,7 +54,7 @@ function startupVersionCheck() {
     _startupCheckResult = {
       checkedAt: new Date().toISOString(),
       versions: results,
-      updatesDetected: Object.values(results).some(r => r.updated)
+      updatesDetected: Object.values(results).some(r => r.updated || r.requiresOriginalSnapshot)
     };
     console.log('[Startup] Chequeo completado.', _startupCheckResult);
   } catch (e) {
@@ -114,49 +116,247 @@ app.get('/api/startup-status', (req, res) => {
 });
 
 // POST /api/restore-originals
-// Restaura TODOS los archivos del juego a su estado original desde los backups.
-// Usar ANTES de abrir el launcher de Hytale para actualizar, evitando que detecte
-// los archivos como corruptos por las modificaciones que hicimos.
-// Los archivos quedan en su estado limpio hasta que el usuario vuelva a guardar
-// cambios en la app (que los vuelve a aplicar).
+// Restaura TODOS los archivos del juego a su estado original desde los backups limpios:
+// 1. Restaura MainMenuBackgrounds.json (fondo y partículas oficiales por defecto)
+// 2. Restaura NewsTilesCarousel.ui (panel de noticias visible original)
+// 3. Restaura HomePage.ui (personaje en posición y visibilidad oficial por defecto)
+// 4. Elimina de BackgroundImages las imágenes PNG añadidas por el usuario (desde su carpeta de origen o perfil)
 app.post('/api/restore-originals', (req, res) => {
   try {
     const versions = getVersions();
     const results = {};
+    const cfg = loadConfig();
 
     for (const ver of versions) {
       const paths = getPathsForVersion(ver);
-      if (!paths || !paths.homePage || !paths.newsTiles || !paths.bgJson) {
+      if (!paths || !paths.homePagePath || !paths.newsCarouselPath || !paths.jsonPath) {
         results[ver] = { skipped: true, reason: 'Rutas no disponibles' };
         continue;
       }
 
       const filesToRestore = [
-        { id: `${ver}_homePage`,  target: paths.homePage },
-        { id: `${ver}_newsTiles`, target: paths.newsTiles },
-        { id: `${ver}_bgJson`,    target: paths.bgJson }
+        { id: `${ver}_HomePage.ui`, target: paths.homePagePath },
+        { id: `${ver}_NewsTilesCarousel.ui`, target: paths.newsCarouselPath },
+        { id: `${ver}_MainMenuBackgrounds.json`, target: paths.jsonPath }
       ];
 
-      const verResult = { restored: [], notFound: [] };
+      const verResult = { restored: [], notFound: [], removedImages: [] };
       for (const { id, target } of filesToRestore) {
         const restored = restoreFromBackup(id, target);
         if (restored) {
           verResult.restored.push(target);
         } else {
           verResult.notFound.push(id);
+          // Si no había backup pero es NewsTilesCarousel, forzar DEFAULT_NEWS_UI
+          if (id.endsWith('_NewsTilesCarousel.ui')) {
+            try {
+              fs.writeFileSync(target, DEFAULT_NEWS_UI, 'utf8');
+              verResult.restored.push(target);
+            } catch (_) {}
+          }
         }
       }
+
+      // Eliminar de BackgroundImages las imágenes añadidas por el usuario
+      if (paths.texturesDir && fs.existsSync(paths.texturesDir)) {
+        const userImagesToRemove = new Set();
+
+        // 1. Imágenes desde la carpeta fuente configurada
+        if (cfg.imagesSourcePath && fs.existsSync(cfg.imagesSourcePath)) {
+          try {
+            fs.readdirSync(cfg.imagesSourcePath)
+              .filter(f => f.toLowerCase().endsWith('.png'))
+              .forEach(f => userImagesToRemove.add(f));
+          } catch (_) {}
+        }
+
+        // 2. Imágenes guardadas en el perfil personalizado
+        const profileDir = getCustomProfileImagesDir(ver);
+        if (fs.existsSync(profileDir)) {
+          try {
+            fs.readdirSync(profileDir)
+              .filter(f => f.toLowerCase().endsWith('.png'))
+              .forEach(f => userImagesToRemove.add(f));
+          } catch (_) {}
+        }
+
+        // 3. Imágenes referenciadas en las personalizaciones del usuario
+        if (cfg.userCustomizations && cfg.userCustomizations[ver] && cfg.userCustomizations[ver].bgConfig) {
+          getReferencedImageNames(cfg.userCustomizations[ver].bgConfig).forEach(f => userImagesToRemove.add(f));
+        }
+
+        for (const imgName of userImagesToRemove) {
+          const destFile = path.join(paths.texturesDir, imgName);
+          if (fs.existsSync(destFile)) {
+            try {
+              fs.unlinkSync(destFile);
+              verResult.removedImages.push(imgName);
+            } catch (_) {}
+          }
+        }
+      }
+
       results[ver] = verResult;
     }
 
     const totalRestored = Object.values(results).reduce((acc, r) => acc + (r.restored ? r.restored.length : 0), 0);
-    console.log(`[RestoreOriginals] Archivos restaurados: ${totalRestored}`);
+    const totalRemovedImages = Object.values(results).reduce((acc, r) => acc + (r.removedImages ? r.removedImages.length : 0), 0);
+    console.log(`[RestoreOriginals] Archivos restaurados: ${totalRestored}, Imágenes de usuario eliminadas de Textures: ${totalRemovedImages}`);
 
-    res.json({ success: true, results, totalRestored });
+    res.json({ success: true, results, totalRestored, totalRemovedImages });
   } catch (err) {
     console.error('[RestoreOriginals] Error:', err);
     res.json({ success: false, error: err.message });
   }
+});
+
+app.get('/api/profiles/status', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  const paths = getPathsForVersion(version);
+  const cfg = loadConfig();
+  const files = getManagedProfileFiles(version, paths);
+  const custom = cfg.userCustomizations && cfg.userCustomizations[version];
+  const hasCustomProfile = Boolean(custom && (
+    custom.bgConfig || custom.newsVisible !== undefined || custom.avatarConfig
+  ));
+
+  let customVfxCount = 0;
+  let customImages = [];
+  if (custom && custom.bgConfig) {
+    customImages = getReferencedImageNames(custom.bgConfig);
+    for (const group of custom.bgConfig.Groups || []) {
+      for (const bg of group.Backgrounds || []) {
+        if (Array.isArray(bg.Vfx)) customVfxCount += bg.Vfx.length;
+      }
+    }
+  }
+
+  const originals = cfg.originalProfiles && cfg.originalProfiles[version];
+
+  res.json({
+    success: true,
+    version,
+    canSaveOriginal: files.length > 0 && files.every(file => fs.existsSync(file.target)),
+    originalSaved: files.length > 0 && files.every(file => fs.existsSync(file.backup)),
+    originalDetails: originals || null,
+    needsOriginalSnapshot: Boolean(cfg.pendingOriginalProfiles && cfg.pendingOriginalProfiles[version]),
+    pendingUpdate: (cfg.pendingOriginalProfiles && cfg.pendingOriginalProfiles[version]) || null,
+    hasCustomProfile,
+    customDetails: hasCustomProfile ? {
+      updatedAt: custom.updatedAt,
+      vfxCount: customVfxCount,
+      imagesCount: customImages.length,
+      images: customImages,
+      hasAvatarConfig: Boolean(custom.avatarConfig),
+      hasNewsConfig: custom.newsVisible !== undefined
+    } : null
+  });
+});
+
+app.post('/api/save-original-profile', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  const paths = getPathsForVersion(version);
+  const files = getManagedProfileFiles(version, paths);
+  const missing = files.filter(file => !fs.existsSync(file.target));
+  if (!files.length || missing.length) {
+    return res.json({
+      success: false,
+      error: 'No se puede guardar el perfil original: faltan archivos del juego.',
+      missing: missing.map(file => file.name)
+    });
+  }
+
+  const failed = files.filter(file => !forceOriginalBackup(file.target, file.id));
+  if (failed.length) {
+    return res.json({ success: false, error: 'No se pudieron respaldar todos los archivos.', failed: failed.map(file => file.name) });
+  }
+
+  const cfg = loadConfig();
+  const hashes = cfg.lastKnownVersionHashes || {};
+  const pending = cfg.pendingOriginalProfiles || {};
+  const originals = cfg.originalProfiles || {};
+  const hash = computeGameVersionHash(paths);
+  if (hash) hashes[version] = hash;
+  delete pending[version];
+  originals[version] = { savedAt: new Date().toISOString(), files: files.map(file => file.name) };
+  saveConfig({ lastKnownVersionHashes: hashes, pendingOriginalProfiles: pending, originalProfiles: originals });
+
+  res.json({ success: true, version, savedFiles: files.map(file => file.name), savedAt: originals[version].savedAt });
+});
+
+app.post('/api/save-custom-profile', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  const paths = getPathsForVersion(version);
+  try {
+    let bgConfig = null;
+    if (paths.jsonPath && fs.existsSync(paths.jsonPath)) {
+      bgConfig = JSON.parse(fs.readFileSync(paths.jsonPath, 'utf8'));
+    }
+
+    let newsVisible = true;
+    if (paths.newsCarouselPath && fs.existsSync(paths.newsCarouselPath)) {
+      const content = fs.readFileSync(paths.newsCarouselPath, 'utf8');
+      newsVisible = !(/@CardWidth\s*=\s*0|Width:\s*0,\s*Height:\s*0/i.test(content));
+    }
+
+    let avatarConfig = { visible: true, top: 320, left: 0 };
+    if (paths.homePagePath && fs.existsSync(paths.homePagePath)) {
+      const content = fs.readFileSync(paths.homePagePath, 'utf8');
+      const blockMatch = content.match(/PlayerPreviewComponent\s+#AvatarPreview\s*\{([\s\S]*?)\}/);
+      if (blockMatch) {
+        const blockStr = blockMatch[1];
+        let visible = true, top = 320, left = 0;
+        if (/Visible:\s*false/i.test(blockStr)) visible = false;
+        const topM = blockStr.match(/Top:\s*(-?\d+)/);
+        const leftM = blockStr.match(/Left:\s*(-?\d+)/);
+        const widthM = blockStr.match(/Width:\s*(\d+)/);
+        if (topM && visible) top = parseInt(topM[1]);
+        if (leftM && visible) left = parseInt(leftM[1]);
+        if (widthM && parseInt(widthM[1]) === 0) visible = false;
+        avatarConfig = { visible, top, left };
+      }
+    }
+
+    saveUserCustomization(version, {
+      bgConfig: bgConfig || { Groups: [{ Backgrounds: [] }] },
+      newsVisible,
+      avatarConfig
+    });
+
+    const cfg = loadConfig();
+    const custom = cfg.userCustomizations && cfg.userCustomizations[version];
+    let vfxCount = 0;
+    if (custom && custom.bgConfig) {
+      for (const group of custom.bgConfig.Groups || []) {
+        for (const bg of group.Backgrounds || []) {
+          if (Array.isArray(bg.Vfx)) vfxCount += bg.Vfx.length;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      version,
+      updatedAt: custom?.updatedAt || new Date().toISOString(),
+      vfxCount,
+      images: custom?.bgConfig ? getReferencedImageNames(custom.bgConfig) : []
+    });
+  } catch (err) {
+    console.error('[SaveCustomProfile] Error:', err);
+    res.json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/apply-custom-profile', (req, res) => {
+  const version = req.query.version || 'pre-release';
+  const cfg = loadConfig();
+  if (!cfg.userCustomizations || !cfg.userCustomizations[version]) {
+    return res.json({ success: false, error: 'No hay un perfil personalizado guardado para esta versión.' });
+  }
+
+  const result = applyCustomizationToGame(version);
+  if (!result.applied) return res.json({ success: false, error: result.reason || 'No se pudo aplicar el perfil personalizado.' });
+  res.json({ success: true, version, restoredImages: result.restoredImages || [] });
 });
 
 const os = require('os');
@@ -195,6 +395,14 @@ function getBackupsDir() {
   const dir = path.join(__dirname, 'backups');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return dir;
+}
+
+function getManagedProfileFiles(version, paths) {
+  return [
+    { id: `${version}_MainMenuBackgrounds.json`, name: 'MainMenuBackgrounds.json', target: paths.jsonPath },
+    { id: `${version}_NewsTilesCarousel.ui`, name: 'NewsTilesCarousel.ui', target: paths.newsCarouselPath },
+    { id: `${version}_HomePage.ui`, name: 'HomePage.ui', target: paths.homePagePath }
+  ].map(file => ({ ...file, backup: path.join(getBackupsDir(), `${file.id}.original`) }));
 }
 
 // Guarda una copia del archivo original sin modificar si aún no existe backup.
@@ -327,6 +535,71 @@ function saveUserCustomization(version, customizationData) {
     updatedAt: new Date().toISOString()
   };
   saveConfig({ userCustomizations: customs });
+
+  const bgConfig = customizationData && customizationData.bgConfig ? customizationData.bgConfig : customs[version]?.bgConfig;
+  if (bgConfig) {
+    const capture = captureCustomProfileImages(version, bgConfig);
+    if (capture.saved && capture.saved.length) {
+      console.log(`[Profiles] PNGs del perfil personalizado guardados para ${version}: ${capture.saved.join(', ')}`);
+    }
+  }
+}
+
+function getCustomProfileImagesDir(version) {
+  const safeVersion = String(version || 'pre-release').replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(__dirname, 'user-profiles', safeVersion, 'BackgroundImages');
+}
+
+function getReferencedImageNames(bgConfig) {
+  const names = new Set();
+  for (const group of (bgConfig && bgConfig.Groups) || []) {
+    for (const background of group.Backgrounds || []) {
+      for (const key of ['Image', 'BlurredImage']) {
+        const value = background[key];
+        if (typeof value !== 'string') continue;
+        const name = path.basename(value.replace(/\\/g, '/'));
+        if (name.toLowerCase().endsWith('.png')) names.add(name);
+      }
+    }
+  }
+  return [...names];
+}
+
+function saveCustomProfileImage(version, sourcePath, fileName) {
+  const safeName = path.basename(String(fileName || ''));
+  if (!safeName.toLowerCase().endsWith('.png') || !fs.existsSync(sourcePath)) return false;
+  const profileDir = getCustomProfileImagesDir(version);
+  fs.mkdirSync(profileDir, { recursive: true });
+  fs.copyFileSync(sourcePath, path.join(profileDir, safeName));
+  return true;
+}
+
+function captureCustomProfileImages(version, bgConfig) {
+  const paths = getPathsForVersion(version);
+  const cfg = loadConfig();
+  const saved = [];
+  const missing = [];
+  for (const fileName of getReferencedImageNames(bgConfig)) {
+    const candidates = [path.join(paths.texturesDir, fileName)];
+    if (cfg.imagesSourcePath) candidates.push(path.join(cfg.imagesSourcePath, fileName));
+    const source = candidates.find(candidate => fs.existsSync(candidate));
+    if (source && saveCustomProfileImage(version, source, fileName)) saved.push(fileName);
+    else missing.push(fileName);
+  }
+  return { saved, missing };
+}
+
+function restoreCustomProfileImages(version) {
+  const profileDir = getCustomProfileImagesDir(version);
+  const { texturesDir } = getPathsForVersion(version);
+  if (!fs.existsSync(profileDir)) return [];
+  fs.mkdirSync(texturesDir, { recursive: true });
+  const restored = [];
+  for (const fileName of fs.readdirSync(profileDir).filter(file => file.toLowerCase().endsWith('.png'))) {
+    fs.copyFileSync(path.join(profileDir, fileName), path.join(texturesDir, fileName));
+    restored.push(fileName);
+  }
+  return restored;
 }
 
 // Re-aplica las configuraciones del usuario sobre los archivos del juego.
@@ -338,7 +611,8 @@ function applyCustomizationToGame(version) {
   if (!custom) return { applied: false, reason: 'Sin personalización guardada' };
 
   const paths = getPathsForVersion(version);
-  let changed = false;
+  const restoredImages = restoreCustomProfileImages(version);
+  let changed = restoredImages.length > 0;
 
   // 1. Re-aplicar MainMenuBackgrounds.json
   if (custom.bgConfig && paths.jsonPath) {
@@ -394,7 +668,7 @@ function applyCustomizationToGame(version) {
     }
   }
 
-  return { applied: changed };
+  return { applied: changed, restoredImages };
 }
 
 // Chequeo Reactivo de versión del juego.
@@ -425,38 +699,13 @@ function checkAndHandleVersionUpdate(version) {
   }
 
   if (lastHash !== currentHash) {
-    console.log(`[Actualización detectada] Versión ${version} cambió (${lastHash} -> ${currentHash})`);
-
-    // PASO 1: Restaurar archivos a su estado original ANTES de respaldar los nuevos.
-    // Esto garantiza que, si el instalador vuelve a correr, encuentre archivos intactos.
-    const restoredJson  = restoreFromBackup(`${version}_MainMenuBackgrounds.json`, paths.jsonPath);
-    const restoredNews  = restoreFromBackup(`${version}_NewsTilesCarousel.ui`,      paths.newsCarouselPath);
-    const restoredHome  = restoreFromBackup(`${version}_HomePage.ui`,               paths.homePagePath);
-
-    // PASO 2: Ahora que los archivos están en estado limpio, respaldar la nueva versión del juego.
-    // Se usa forceOriginalBackup para pisar el backup anterior con el recién instalado.
-    forceOriginalBackup(paths.jsonPath,        `${version}_MainMenuBackgrounds.json`);
-    forceOriginalBackup(paths.newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
-    forceOriginalBackup(paths.homePagePath,     `${version}_HomePage.ui`);
-
-    // PASO 3: Re-aplicar la personalización guardada sobre los nuevos archivos del juego.
-    const syncRes = applyCustomizationToGame(version);
-
-    // Registrar el nuevo hash de la carpeta (ya incluye los cambios del usuario)
-    const newHashAfter = computeGameVersionHash(paths);
-    if (newHashAfter) {
-      vHashes[version] = newHashAfter;
-      saveConfig({ lastKnownVersionHashes: vHashes });
+    const pending = cfg.pendingOriginalProfiles || {};
+    if (!pending[version] || pending[version].hash !== currentHash) {
+      pending[version] = { hash: currentHash, detectedAt: new Date().toISOString() };
+      saveConfig({ pendingOriginalProfiles: pending });
+      console.log(`[Actualización detectada] ${version} espera guardar su nuevo perfil original.`);
     }
-
-    return {
-      detected: true,
-      updated: true,
-      previousHash: lastHash,
-      newHash: newHashAfter || currentHash,
-      restored: { json: restoredJson, news: restoredNews, home: restoredHome },
-      reapplied: syncRes.applied
-    };
+    return { detected: true, updated: false, requiresOriginalSnapshot: true, previousHash: lastHash, newHash: currentHash };
   }
 
   return { detected: true, updated: false };

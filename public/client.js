@@ -57,7 +57,7 @@ const translations = {
         imagesSourceGearTitle: "Cambiar carpeta de imágenes",
         helpBtnLabel: "❓ Ayuda",
         helpBtnTitle: "¿Ves un error de validación en Hytale? Haz clic para ver cómo solucionarlo",
-        previewBtnLabel: "◫ Preview", previewBtnTitle: "Previsualizar el fondo y las partículas",
+        previewBtnLabel: "Preview", previewBtnTitle: "Previsualizar el fondo y las partículas",
         previewTitle: "Vista previa del menú", previewNoImage: "Selecciona una imagen PNG para ver el fondo.",
         previewLoading: "Cargando imagen...", previewImageUnavailable: "No se pudo cargar esta imagen. Comprueba que exista en BackgroundImages.",
         previewParticlesTitle: "Partículas", previewNoParticles: "Agrega una partícula para editarla en la vista previa.",
@@ -83,7 +83,14 @@ const translations = {
         helpModalOpt2Step4: "Hacé clic en <strong style=\"color:#f87171;\">UNINSTALL</strong> / Desinstalar",
         helpModalOpt2Step5: "Volvé a instalar la versión desde el launcher",
         helpModalOpt2Step6: "Abrí esta app y guardá tus cambios para volver a personalizar",
-        helpModalRestoreBtn: "🔄 Restaurar archivos originales ahora"
+        helpModalRestoreBtn: "🔄 Restaurar archivos originales ahora",
+        profilesBtnLabel: "⚙️ Perfiles",
+        profilesModalTitle: "Administrador de Perfiles",
+        profilesModalSubtitle: "Controla el perfil original oficial del juego (snapshot limpio) y tu perfil personalizado con partículas, imágenes y configuraciones.",
+        profileOriginalTitle: "Perfil Original (Hytale Oficial)",
+        profileOriginalDesc: "Snapshot de los archivos limpios del equipo de Hytale (MainMenuBackgrounds.json, carrusel y home). Úsalo cuando salga una nueva versión con nuevas imágenes y partículas para guardarla como versión original oficial.",
+        profileCustomTitle: "Perfil Personalizado del Usuario",
+        profileCustomDesc: "Contiene todas tus partículas 3D, imágenes personalizadas, visibilidad de noticias y posición del personaje. Puedes volver a ponerlas en el juego en cualquier momento con un solo clic."
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -138,7 +145,7 @@ const translations = {
         imagesSourceGearTitle: "Change images folder",
         helpBtnLabel: "❓ Help",
         helpBtnTitle: "Seeing a validation error in Hytale? Click to see how to fix it",
-        previewBtnLabel: "◫ Preview", previewBtnTitle: "Preview the background and particles",
+        previewBtnLabel: "Preview", previewBtnTitle: "Preview the background and particles",
         previewTitle: "Menu preview", previewNoImage: "Select a PNG image to preview the background.",
         previewLoading: "Loading image...", previewImageUnavailable: "This image could not be loaded. Check that it exists in BackgroundImages.",
         previewParticlesTitle: "Particles", previewNoParticles: "Add a particle to edit it in the preview.",
@@ -164,7 +171,14 @@ const translations = {
         helpModalOpt2Step4: "Click <strong style=\"color:#f87171;\">UNINSTALL</strong>",
         helpModalOpt2Step5: "Reinstall the version from the launcher",
         helpModalOpt2Step6: "Open this app and save your changes to customize again",
-        helpModalRestoreBtn: "🔄 Restore original files now"
+        helpModalRestoreBtn: "🔄 Restore original files now",
+        profilesBtnLabel: "⚙️ Profiles",
+        profilesModalTitle: "Profiles Manager",
+        profilesModalSubtitle: "Manage the official clean game snapshot and your custom profile containing particles, images and layout settings.",
+        profileOriginalTitle: "Original Profile (Official Hytale)",
+        profileOriginalDesc: "Clean snapshot of official Hytale files (MainMenuBackgrounds.json, carousel, and home). When a new game update arrives with new images and particles from the Hytale team, save it as the new original official version.",
+        profileCustomTitle: "Custom User Profile",
+        profileCustomDesc: "Holds all your 3D particles, custom images, news carousel and character settings. Re-apply them back to the game anytime with one click."
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -219,7 +233,7 @@ const translations = {
         imagesSourceGearTitle: "Alterar pasta de imagens",
         helpBtnLabel: "❓ Ajuda",
         helpBtnTitle: "Vendo um erro de validação no Hytale? Clique para ver como resolver",
-        previewBtnLabel: "◫ Prévia", previewBtnTitle: "Visualizar o fundo e as partículas",
+        previewBtnLabel: "Prévia", previewBtnTitle: "Visualizar o fundo e as partículas",
         previewTitle: "Prévia do menu", previewNoImage: "Selecione uma imagem PNG para visualizar o fundo.",
         previewLoading: "Carregando imagem...", previewImageUnavailable: "Não foi possível carregar esta imagem. Verifique se ela existe em BackgroundImages.",
         previewParticlesTitle: "Partículas", previewNoParticles: "Adicione uma partícula para editá-la na prévia.",
@@ -245,7 +259,14 @@ const translations = {
         helpModalOpt2Step4: "Clique em <strong style=\"color:#f87171;\">UNINSTALL</strong> / Desinstalar",
         helpModalOpt2Step5: "Reinstale a versão a partir do inicializador",
         helpModalOpt2Step6: "Abra este aplicativo e salve suas alterações para personalizar novamente",
-        helpModalRestoreBtn: "🔄 Restaurar arquivos originais agora"
+        helpModalRestoreBtn: "🔄 Restaurar arquivos originais agora",
+        profilesBtnLabel: "⚙️ Perfis",
+        profilesModalTitle: "Gerenciador de Perfis",
+        profilesModalSubtitle: "Controle o snapshot limpo oficial do jogo e seu perfil personalizado com partículas, imagens e configurações.",
+        profileOriginalTitle: "Perfil Original (Oficial Hytale)",
+        profileOriginalDesc: "Snapshot dos arquivos limpos da equipe Hytale (MainMenuBackgrounds.json, carrossel e home). Quando sair uma nova versão com novas imagens e partículas da equipe Hytale, salve-a como nova versão original oficial.",
+        profileCustomTitle: "Perfil Personalizado do Usuário",
+        profileCustomDesc: "Contém todas as suas partículas 3D, imagens personalizadas, visibilidade de notícias e posição do personagem. Reaplique tudo no jogo a qualquer momento com um clique."
     }
 };
 
@@ -260,6 +281,9 @@ const selectBlurPreset = document.getElementById('select-blurred-preset');
 const fileUpload = document.getElementById('file-upload');
 const btnSaveAll = document.getElementById('btn-save-all');
 const btnRestoreOriginals = document.getElementById('btn-restore-originals');
+const btnSaveOriginalProfile = document.getElementById('btn-save-original-profile');
+const btnSaveCustomProfile = document.getElementById('btn-save-custom-profile');
+const btnApplyCustomProfile = document.getElementById('btn-apply-custom-profile');
 const btnOpenPreview = document.getElementById('btn-open-preview');
 const previewModal = document.getElementById('modal-preview');
 const previewCanvas = document.getElementById('preview-canvas');
@@ -433,6 +457,7 @@ async function init() {
     await loadNewsStatus();
     await loadAvatarStatus();
     await refreshTexturePresets();
+    await refreshProfileStatus();
     updateLanguageUI();
     checkAppUpdate(); // No bloqueante — corre en background
 
@@ -443,6 +468,7 @@ async function init() {
         await loadNewsStatus();
         await loadAvatarStatus();
         await refreshTexturePresets();
+        await refreshProfileStatus();
         await checkLinuxHytaleStatus();
         
         if (dataRes && dataRes.fileExists === false) {
@@ -466,7 +492,10 @@ async function init() {
         renderForm();
     });
 
-    btnSaveAll.addEventListener('click', saveConfig);
+    btnSaveAll.addEventListener('click', async () => {
+        await saveConfig();
+        await refreshProfileStatus();
+    });
     btnOpenFolder.addEventListener('click', () => fetch(`/api/open-folder?version=${encodeURIComponent(currentVersion)}`, { method: 'POST' }));
     btnAddVfx.addEventListener('click', addVfxEffect);
     btnApplyVfx.addEventListener('click', applyVfxChanges);
@@ -503,7 +532,13 @@ async function init() {
                 if (res.success) {
                     btnRestoreOriginals.textContent = '✅ Archivos restaurados';
                     btnRestoreOriginals.classList.add('restored');
-                    showToast(t.restoreOriginalsOk || '✅ Archivos originales restaurados. Ahora podés abrir el launcher de Hytale y actualizar sin problemas.');
+                    showToast(t.restoreOriginalsOk || '✅ Archivos originales restaurados.');
+
+                    // Recargar toda la interfaz para reflejar el estado limpio original
+                    await loadData();
+                    await loadAvatarStatus();
+                    await loadNewsStatus();
+
                     // Volver al estado normal después de unos segundos
                     setTimeout(() => {
                         btnRestoreOriginals.disabled = false;
@@ -520,6 +555,71 @@ async function init() {
                 btnRestoreOriginals.disabled = false;
                 btnRestoreOriginals.textContent = '🛡️ Preparar para actualizar';
                 showToast(t.restoreOriginalsError || 'Error de conexión al restaurar archivos.', true);
+            }
+        });
+    }
+
+    if (btnSaveOriginalProfile) {
+        btnSaveOriginalProfile.addEventListener('click', async () => {
+            const confirmed = confirm('¿Guardar el perfil original limpio de esta versión? Esto actualiza el snapshot base para esta instalación.');
+            if (!confirmed) return;
+            btnSaveOriginalProfile.disabled = true;
+            btnSaveOriginalProfile.textContent = '⏳ Guardando...';
+            try {
+                const res = await fetch(`/api/save-original-profile?version=${encodeURIComponent(currentVersion)}`, { method: 'POST' }).then(r => r.json());
+                btnSaveOriginalProfile.disabled = false;
+                btnSaveOriginalProfile.textContent = res.success ? '✅ Perfil original guardado' : '💾 Guardar perfil original';
+                showToast(res.success ? `✅ Perfil original guardado para ${currentVersion}.` : `❌ ${res.error || 'No se pudo guardar el perfil original.'}`, !res.success);
+                await refreshProfileStatus();
+            } catch (e) {
+                btnSaveOriginalProfile.disabled = false;
+                btnSaveOriginalProfile.textContent = '💾 Guardar perfil original';
+                showToast('❌ Error de conexión al guardar el perfil original.', true);
+            }
+        });
+    }
+
+    if (btnSaveCustomProfile) {
+        btnSaveCustomProfile.addEventListener('click', async () => {
+            updateCurrentBgFromInputs();
+            btnSaveCustomProfile.disabled = true;
+            btnSaveCustomProfile.textContent = '⏳ Guardando...';
+            try {
+                // Primero asegurar que los cambios actuales se hayan guardado en los archivos si hay cambios pendientes
+                await saveConfig();
+                const res = await fetch(`/api/save-custom-profile?version=${encodeURIComponent(currentVersion)}`, { method: 'POST' }).then(r => r.json());
+                btnSaveCustomProfile.disabled = false;
+                btnSaveCustomProfile.textContent = res.success ? '✅ Perfil personalizado guardado' : '💾 Guardar configuración de perfil personalizado';
+                showToast(res.success ? `✅ Configuración de perfil personalizado guardada (${res.vfxCount || 0} partículas, ${res.images?.length || 0} imágenes).` : `❌ ${res.error || 'Error al guardar.'}`, !res.success);
+                await refreshProfileStatus();
+            } catch (e) {
+                btnSaveCustomProfile.disabled = false;
+                btnSaveCustomProfile.textContent = '💾 Guardar configuración de perfil personalizado';
+                showToast('❌ Error de conexión al guardar el perfil personalizado.', true);
+            }
+        });
+    }
+
+    if (btnApplyCustomProfile) {
+        btnApplyCustomProfile.addEventListener('click', async () => {
+            btnApplyCustomProfile.disabled = true;
+            btnApplyCustomProfile.textContent = '⏳ Aplicando...';
+            try {
+                const res = await fetch(`/api/apply-custom-profile?version=${encodeURIComponent(currentVersion)}`, { method: 'POST' }).then(r => r.json());
+                btnApplyCustomProfile.disabled = false;
+                btnApplyCustomProfile.textContent = res.success ? '✅ Perfil personalizado aplicado' : '🔁 Aplicar perfil personalizado';
+                showToast(res.success ? `✅ Perfil personalizado reaplicado en ${currentVersion}.` : `❌ ${res.error || 'No hay perfil personalizado guardado.'}`, !res.success);
+                if (res.success) {
+                    await loadData();
+                    await loadNewsStatus();
+                    await loadAvatarStatus();
+                    await refreshTexturePresets();
+                }
+                await refreshProfileStatus();
+            } catch (e) {
+                btnApplyCustomProfile.disabled = false;
+                btnApplyCustomProfile.textContent = '🔁 Aplicar perfil personalizado';
+                showToast('❌ Error de conexión al reaplicar el perfil personalizado.', true);
             }
         });
     }
@@ -554,6 +654,7 @@ async function init() {
     // Inicializar modal de ayuda para error de validación
     initHelpValidationModal();
     initPreviewModal();
+    initProfilesConfigModal();
 }
 
 // ── Card de Carpeta de Imágenes PNG del usuario ────────────────────────────
@@ -769,6 +870,35 @@ function initHelpValidationModal() {
             if (btn) btn.click();
         });
     }
+}
+
+// ── Modal de Configuración de Perfiles (Original y Personalizado) ───────────────
+function initProfilesConfigModal() {
+    const modal = document.getElementById('modal-profiles-config');
+    const openBtn = document.getElementById('btn-open-profiles-modal');
+    const closeBtn = document.getElementById('modal-profiles-close');
+    const okBtn = document.getElementById('modal-profiles-ok');
+    if (!modal || !openBtn) return;
+
+    function openModal() {
+        modal.style.display = 'flex';
+        refreshProfileStatus();
+    }
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    openBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (okBtn) okBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+    });
 }
 
 async function loadVersions() {
@@ -1061,7 +1191,22 @@ function initPreviewModal() {
             const vfx = bg && bg.Vfx && bg.Vfx[selectedPreviewParticle];
             if (!vfx) return;
             const field = input.dataset.field;
-            vfx[field] = input.type === 'number' ? (parseFloat(input.value) || 0) : input.value;
+            const isNum = input.type === 'number' || input.type === 'range';
+            const val = isNum ? (parseFloat(input.value) || 0) : input.value;
+            vfx[field] = val;
+
+            // Sincronizar pares (slider <-> number) dentro del inspector
+            previewInspector.querySelectorAll(`[data-field="${field}"]`).forEach(peer => {
+                if (peer !== input) peer.value = input.value;
+            });
+
+            // Actualizar etiqueta badge si existe
+            const valBadge = document.getElementById(`preview-${field.toLowerCase()}-val`);
+            if (valBadge && isNum) {
+                valBadge.textContent = Number(val).toFixed(field === 'X' || field === 'Y' ? 3 : 1);
+            }
+
+            // Sincronizar con la tarjeta de la lista principal
             const cardInput = vfxListEl.querySelectorAll('.vfx-card')[selectedPreviewParticle]
                 ?.querySelector(`[data-field="${field}"]`);
             if (cardInput && cardInput !== input) cardInput.value = input.value;
@@ -1145,7 +1290,66 @@ function renderPreviewScene() {
         markerLabel.className = 'particle-marker-tag';
         markerLabel.textContent = particle.SystemId || `Particle ${index + 1}`;
         marker.appendChild(markerLabel);
-        marker.addEventListener('click', () => {
+
+        // Arrastre directo de la partícula en el canvas
+        let isDraggingMarker = false;
+        marker.addEventListener('pointerdown', e => {
+            e.stopPropagation();
+            selectedPreviewParticle = index;
+            isDraggingMarker = true;
+            marker.setPointerCapture(e.pointerId);
+            renderPreviewScene();
+        });
+
+        marker.addEventListener('pointermove', e => {
+            if (!isDraggingMarker) return;
+            e.stopPropagation();
+            const canvasRect = previewCanvas.getBoundingClientRect();
+            const relX = (e.clientX - canvasRect.left - imageLeft) / imageWidth;
+            const relY = (e.clientY - canvasRect.top - imageTop) / imageHeight;
+            const clampedX = Math.round(Math.max(0, Math.min(1, relX)) * 1000) / 1000;
+            const clampedY = Math.round(Math.max(0, Math.min(1, relY)) * 1000) / 1000;
+
+            particle.X = clampedX;
+            particle.Y = clampedY;
+
+            // Actualizar inputs del inspector
+            const xRange = document.getElementById('preview-x-range');
+            const xNum = document.getElementById('preview-x');
+            const yRange = document.getElementById('preview-y-range');
+            const yNum = document.getElementById('preview-y');
+            const xBadge = document.getElementById('preview-x-val');
+            const yBadge = document.getElementById('preview-y-val');
+            if (xRange) xRange.value = clampedX;
+            if (xNum) xNum.value = clampedX;
+            if (yRange) yRange.value = clampedY;
+            if (yNum) yNum.value = clampedY;
+            if (xBadge) xBadge.textContent = clampedX.toFixed(3);
+            if (yBadge) yBadge.textContent = clampedY.toFixed(3);
+
+            // Posición directa del marker
+            marker.style.left = `${imageLeft + clampedX * imageWidth}px`;
+            marker.style.top = `${imageTop + clampedY * imageHeight}px`;
+
+            // Sincronizar inputs en la lista principal
+            const cardX = vfxListEl.querySelectorAll('.vfx-card')[index]?.querySelector('[data-field="X"]');
+            const cardY = vfxListEl.querySelectorAll('.vfx-card')[index]?.querySelector('[data-field="Y"]');
+            if (cardX) cardX.value = clampedX;
+            if (cardY) cardY.value = clampedY;
+        });
+
+        const stopDragging = e => {
+            if (isDraggingMarker) {
+                isDraggingMarker = false;
+                try { marker.releasePointerCapture(e.pointerId); } catch (_) {}
+                renderPreviewScene();
+            }
+        };
+        marker.addEventListener('pointerup', stopDragging);
+        marker.addEventListener('pointercancel', stopDragging);
+
+        marker.addEventListener('click', (e) => {
+            e.stopPropagation();
             selectedPreviewParticle = index;
             renderPreviewScene();
         });
@@ -1161,7 +1365,7 @@ function renderPreviewScene() {
         title.appendChild(name);
         const details = document.createElement('span');
         details.className = 'preview-particle-details';
-        details.textContent = `X ${x} · Y ${y} · Z ${z} · ${translations[currentLang].scaleLabel}: ${particle.Scale ?? 1}`;
+        details.innerHTML = `<span><strong>X:</strong> ${Number(x).toFixed(3)}</span><span><strong>Y:</strong> ${Number(y).toFixed(3)}</span><span><strong>Z:</strong> ${Number(z).toFixed(1)}</span><span><strong>Esc:</strong> ${Number(particle.Scale ?? 1).toFixed(1)}</span>`;
         listItem.append(title, details);
         listItem.addEventListener('click', () => {
             selectedPreviewParticle = index;
@@ -1171,9 +1375,19 @@ function renderPreviewScene() {
     });
 
     const selected = particles[selectedPreviewParticle];
-    previewInspector.querySelectorAll('[data-field]').forEach(input => {
-        if (document.activeElement !== input) input.value = selected[input.dataset.field] ?? (input.dataset.field === 'Scale' ? 1 : 0);
-    });
+    if (selected) {
+        previewInspector.querySelectorAll('[data-field]').forEach(input => {
+            if (document.activeElement !== input) {
+                input.value = selected[input.dataset.field] ?? (input.dataset.field === 'Scale' ? 1 : 0);
+            }
+        });
+        ['X', 'Y', 'Z', 'Scale'].forEach(field => {
+            const badge = document.getElementById(`preview-${field.toLowerCase()}-val`);
+            if (badge && selected[field] !== undefined) {
+                badge.textContent = Number(selected[field]).toFixed(field === 'X' || field === 'Y' ? 3 : 1);
+            }
+        });
+    }
 }
 
 async function applyVfxChanges() {
@@ -1218,6 +1432,94 @@ async function saveConfig() {
         body: JSON.stringify(currentConfig)
     }).then(r => r.json());
     showToast(res.success ? translations[currentLang].toastSaved : `Error: ${res.error}`, !res.success);
+    return res;
+}
+
+async function refreshProfileStatus() {
+    try {
+        const res = await fetch(`/api/profiles/status?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
+        if (!res || !res.success) return;
+
+        const origBadge = document.getElementById('profile-original-status-badge');
+        const origDetails = document.getElementById('profile-original-details');
+        const custBadge = document.getElementById('profile-custom-status-badge');
+        const custDetails = document.getElementById('profile-custom-details');
+
+        // Snapshot original
+        if (origBadge) {
+            if (res.needsOriginalSnapshot) {
+                origBadge.textContent = '⚡ Nueva versión detectada';
+                origBadge.style.background = 'rgba(245,158,11,0.2)';
+                origBadge.style.color = '#fbbf24';
+                origBadge.style.borderColor = 'rgba(245,158,11,0.4)';
+            } else if (res.originalSaved) {
+                origBadge.textContent = '✅ Original oficial guardado';
+                origBadge.style.background = 'rgba(56,189,248,0.2)';
+                origBadge.style.color = '#38bdf8';
+                origBadge.style.borderColor = 'rgba(56,189,248,0.4)';
+            } else {
+                origBadge.textContent = '⚠️ Sin snapshot original';
+                origBadge.style.background = 'rgba(239,68,68,0.2)';
+                origBadge.style.color = '#f87171';
+                origBadge.style.borderColor = 'rgba(239,68,68,0.4)';
+            }
+        }
+
+        if (origDetails) {
+            if (res.needsOriginalSnapshot) {
+                origDetails.innerHTML = `<strong style="color:#fbbf24;">¡Atención!</strong> Se detectó una nueva versión instalada del juego con archivos limpios actualizados. Dale a <strong>"Guardar esta nueva versión como original"</strong> para fijarla como la versión base oficial.`;
+            } else if (res.originalSaved) {
+                const dateStr = res.originalDetails && res.originalDetails.savedAt ? new Date(res.originalDetails.savedAt).toLocaleString() : 'Previamente';
+                const fileList = res.originalDetails && res.originalDetails.files ? res.originalDetails.files.join(', ') : 'Archivos base';
+                origDetails.innerHTML = `Snapshot base guardado el: <strong>${dateStr}</strong><br><span style="color:#94a3b8; font-size:0.75rem;">Archivos respaldados: ${fileList}</span>`;
+            } else {
+                origDetails.textContent = 'Aún no se ha respaldado la copia original oficial para esta versión.';
+            }
+        }
+
+        if (btnSaveOriginalProfile) {
+            btnSaveOriginalProfile.disabled = !res.canSaveOriginal;
+            btnSaveOriginalProfile.textContent = res.needsOriginalSnapshot
+                ? '💾 Guardar esta nueva versión como original'
+                : (res.originalSaved ? '💾 Actualizar snapshot original' : '💾 Guardar versión como original');
+        }
+
+        // Perfil personalizado
+        if (custBadge) {
+            if (res.hasCustomProfile) {
+                custBadge.textContent = '✅ Perfil personalizado activo';
+                custBadge.style.background = 'rgba(16,185,129,0.2)';
+                custBadge.style.color = '#34d399';
+                custBadge.style.borderColor = 'rgba(16,185,129,0.4)';
+            } else {
+                custBadge.textContent = '⚪ Sin personalización previa';
+                custBadge.style.background = 'rgba(148,163,184,0.2)';
+                custBadge.style.color = '#94a3b8';
+                custBadge.style.borderColor = 'rgba(148,163,184,0.3)';
+            }
+        }
+
+        if (custDetails) {
+            if (res.hasCustomProfile && res.customDetails) {
+                const dateStr = res.customDetails.updatedAt ? new Date(res.customDetails.updatedAt).toLocaleString() : 'Guardado recientemente';
+                const imgs = res.customDetails.images && res.customDetails.images.length ? res.customDetails.images.join(', ') : 'Ninguna';
+                custDetails.innerHTML = `Última personalización: <strong>${dateStr}</strong><br>` +
+                    `✨ <strong>Partículas:</strong> ${res.customDetails.vfxCount} efecto(s) &nbsp;|&nbsp; ` +
+                    `🖼️ <strong>Imágenes:</strong> ${res.customDetails.imagesCount} PNG(s) (${imgs})`;
+            } else {
+                custDetails.textContent = 'Modifica el fondo o añade partículas en el editor y guarda los cambios para crear tu perfil personalizado.';
+            }
+        }
+
+        if (btnApplyCustomProfile) {
+            btnApplyCustomProfile.disabled = !res.hasCustomProfile;
+            btnApplyCustomProfile.textContent = res.hasCustomProfile
+                ? '🔁 Volver a poner mi personalización (Partículas e Imágenes)'
+                : '🔒 Sin perfil personalizado guardado';
+        }
+    } catch (e) {
+        console.error('Error al consultar el estado de perfiles:', e);
+    }
 }
 
 function showToast(msg, isError = false) {

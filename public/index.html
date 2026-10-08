@@ -8,14 +8,42 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Outfit:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
     <header class="titlebar">
         <div class="titlebar-left">
-            <span class="app-icon">🎮</span>
-            <span class="app-title">Hytale – Main Menu Background Editor</span>
+            <div class="titlebar-brand">
+                <span class="app-icon">🎮</span>
+                <span class="app-title">Hytale Background Manager</span>
+            </div>
+            <div class="titlebar-nav-actions">
+                <button id="btn-open-preview" class="btn-nav-action btn-nav-preview" data-i18n-title="previewBtnTitle" title="Previsualizar fondo y partículas">
+                    <svg class="nav-btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span data-i18n="previewBtnLabel">Preview</span>
+                </button>
+                <button id="btn-help-validation" class="btn-nav-action btn-nav-help" data-i18n="helpBtnLabel" data-i18n-title="helpBtnTitle" title="¿Ves un error de validación en Hytale? Haz clic para ver cómo solucionarlo">
+                    <svg class="nav-btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span>Ayuda</span>
+                </button>
+                <button id="btn-open-profiles-modal" class="btn-nav-action btn-nav-profiles" data-i18n="profilesBtnLabel" title="Gestionar perfil original de la empresa y perfil personalizado">
+                    <svg class="nav-btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Perfiles</span>
+                </button>
+            </div>
         </div>
 
         <div class="header-controls">
@@ -60,23 +88,18 @@
                 <div class="editor-header">
                     <h2 data-i18n="editingBackground">Editor de Fondo</h2>
                     <div class="header-actions">
-                        <button id="btn-open-preview" class="btn-preview" data-i18n="previewBtnLabel" data-i18n-title="previewBtnTitle" title="Previsualizar fondo y partículas">◫ Preview</button>
-                        <button id="btn-restore-originals" class="btn btn-restore" data-i18n="restoreOriginalsBtn" data-i18n-title="restoreOriginalsTooltip"
-                            title="¿Salió una nueva versión de Hytale? Usá este botón ANTES de actualizar para devolver los archivos del juego a su estado original. Así el launcher no los detecta como corruptos y la actualización sale sin problemas.">
-                            🔄 Restaurar archivos originales del juego
-                        </button>
-                        <button id="btn-save-all" class="btn btn-success" data-i18n="saveChanges">💾 Guardar
-                            Cambios</button>
+                        <button id="btn-save-all" class="btn btn-success" data-i18n="saveChanges">💾 Guardar Cambios</button>
                     </div>
                 </div>
 
                 <!-- Selector de Carpeta Hytale y Búsqueda de Archivos (Multiplataforma: Windows, Linux, Mac) -->
-                <div class="card hytale-folder-card" style="margin-bottom: 20px; border-color: #6366f1; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);">
+                <!-- Selector de Carpeta Hytale y Búsqueda de Archivos (Multiplataforma: Windows, Linux, Mac) -->
+                <div class="card hytale-folder-card">
                     <div class="card-header">
                         <h3 style="display:flex; align-items:center; gap:8px;">
                             <span>📁</span> <span data-i18n="hytaleFolderTitle">Carpeta de Instalación de Hytale</span>
                         </h3>
-                        <span id="platform-badge" style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#a5b4fc; padding:4px 10px; border-radius:12px; border:1px solid rgba(99,102,241,0.3); font-weight:600;">
+                        <span id="platform-badge" style="font-size:0.75rem; background:rgba(255,255,255,0.06); color:#cbd5e1; padding:4px 10px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); font-weight:600;">
                             Hytale Path
                         </span>
                     </div>
@@ -85,54 +108,54 @@
                     </p>
 
                     <div style="display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap;">
-                        <input type="text" id="linux-folder-input" placeholder="Ej: C:\Users\TuUsuario\AppData\Roaming\Hytale\install, ~/.local/share/Hytale o ~/Library/Application Support/Hytale" style="flex:1; min-width: 250px; padding: 10px 14px; background: #090d11; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.9rem;">
+                        <input type="text" id="linux-folder-input" placeholder="Ej: C:\Users\TuUsuario\AppData\Roaming\Hytale\install, ~/.local/share/Hytale o ~/Library/Application Support/Hytale" style="flex:1; min-width: 250px;">
                         <button id="btn-linux-scan" class="btn btn-primary" style="white-space: nowrap; padding: 10px 18px;" data-i18n="scanFilesBtn">
                             🔍 Buscar Archivos
                         </button>
-                        <button id="btn-clear-path" class="btn btn-secondary" style="white-space: nowrap; padding: 10px 14px; opacity: 0.75;" data-i18n-title="clearPathTitle" title="Limpiar ruta guardada">
+                        <button id="btn-clear-path" class="btn btn-secondary" style="white-space: nowrap; padding: 10px 14px; opacity: 0.85;" data-i18n-title="clearPathTitle" title="Limpiar ruta guardada">
                             🗑️ Limpiar
                         </button>
                     </div>
 
                     <!-- Indicadores de archivos detectados -->
-                    <div id="linux-scan-status-box" style="margin-top: 14px; padding: 14px; background: rgba(9, 13, 17, 0.7); border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                    <div id="linux-scan-status-box" style="margin-top: 14px; padding: 14px; background: rgba(0, 0, 0, 0.35); border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
                             <span style="font-size:0.85rem; font-weight:600; color:#cbd5e1;" data-i18n="filesDetectedLabel">Archivos necesarios detectados:</span>
                             <strong id="linux-status-summary" style="font-size:0.85rem; color:#10b981;">Comprobando...</strong>
                         </div>
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; font-size: 0.8rem;">
-                            <div id="badge-json" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                            <div id="badge-json" style="padding: 6px 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1;">
                                 ⏳ MainMenuBackgrounds.json
                             </div>
-                            <div id="badge-textures" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                            <div id="badge-textures" style="padding: 6px 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1;">
                                 ⏳ Carpeta BackgroundImages
                             </div>
-                            <div id="badge-news" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                            <div id="badge-news" style="padding: 6px 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1;">
                                 ⏳ NewsTilesCarousel.ui
                             </div>
-                            <div id="badge-homepage" style="padding: 6px 10px; border-radius: 6px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.06); color: #94a3b8;">
+                            <div id="badge-homepage" style="padding: 6px 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1;">
                                 ⏳ HomePage.ui
                             </div>
                         </div>
                     </div>
                 </div>
 
-                    <div class="card images-source-card" style="border-color: #7c3aed; background: linear-gradient(180deg, #1e1b2e 0%, #0f0d1a 100%);">
+                <div class="card images-source-card">
                     <div class="card-header">
-                        <h3 style="display:flex; align-items:center; gap:8px; color: #a78bfa;">
+                        <h3 style="display:flex; align-items:center; gap:8px;">
                             <span>🗂️</span>
                             <span data-i18n="imagesSourceTitle">Carpeta de mis imágenes PNG</span>
                         </h3>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <!-- Botón Importar PNG movido aquí -->
-                            <label for="file-upload" class="btn btn-accent btn-sm" style="cursor:pointer;" data-i18n="importPng">
+                            <label for="file-upload" class="btn btn-secondary btn-sm" style="cursor:pointer;" data-i18n="importPng">
                                 ⬆️ Importar PNG
                             </label>
                             <input type="file" id="file-upload" accept=".png" style="display:none;">
                             <!-- Badge: cantidad de PNGs en la carpeta (visible cuando está configurado) -->
-                            <span id="images-source-count-badge" class="hidden" style="font-size:0.75rem; background:rgba(124,58,237,0.2); color:#c4b5fd; padding:4px 10px; border-radius:12px; border:1px solid rgba(124,58,237,0.35); font-weight:600;"></span>
+                            <span id="images-source-count-badge" class="hidden" style="font-size:0.75rem; background:rgba(255,255,255,0.08); color:#cbd5e1; padding:4px 10px; border-radius:12px; border:1px solid rgba(255,255,255,0.15); font-weight:600;"></span>
                             <!-- Botón engranaje para reconfigurar (visible cuando está configurado) -->
-                            <button id="btn-images-source-gear" class="hidden" data-i18n-title="imagesSourceGearTitle" title="Cambiar carpeta de imágenes" style="background:rgba(124,58,237,0.15); border:1px solid rgba(124,58,237,0.3); color:#a78bfa; border-radius:6px; padding:5px 9px; cursor:pointer; font-size:1rem; transition: all 0.2s;">⚙️</button>
+                            <button id="btn-images-source-gear" class="btn btn-secondary btn-sm hidden" data-i18n-title="imagesSourceGearTitle" title="Cambiar carpeta de imágenes" style="padding:5px 9px; cursor:pointer; font-size:1rem;">⚙️</button>
                         </div>
                     </div>
                     <p class="help-text" data-i18n="imagesSourceHelp">
@@ -144,8 +167,8 @@
                         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                             <input type="text" id="images-source-input"
                                 placeholder="Ej: C:\Users\TuUsuario\MisCarpetasHytale\Imagenes"
-                                style="flex:1; min-width:240px; padding:10px 14px; background:#07080e; border:1px solid rgba(124,58,237,0.4); border-radius:6px; color:#f8fafc; font-size:0.9rem;">
-                            <button id="btn-images-source-save" class="btn" style="white-space:nowrap; padding:10px 18px; background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; border:none; border-radius:6px; font-weight:700; cursor:pointer; transition:filter 0.2s;" data-i18n="imagesSourceSaveBtn">
+                                style="flex:1; min-width:240px;">
+                            <button id="btn-images-source-save" class="btn btn-primary" style="white-space:nowrap; padding:10px 18px;" data-i18n="imagesSourceSaveBtn">
                                 💾 Guardar y aplicar
                             </button>
                         </div>
@@ -154,13 +177,13 @@
 
                     <!-- Estado: configurado (ruta guardada + botón aplicar) -->
                     <div id="images-source-configured" class="hidden" style="margin-top:12px;">
-                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 14px; background:rgba(7,8,14,0.7); border:1px solid rgba(124,58,237,0.25); border-radius:8px;">
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 14px; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-radius:8px;">
                             <span style="font-size:1rem; flex-shrink:0;">📁</span>
-                            <span id="images-source-path-display" style="flex:1; font-size:0.85rem; color:#c4b5fd; font-family:monospace; word-break:break-all;"></span>
-                            <button id="btn-images-source-apply" class="btn" style="white-space:nowrap; padding:8px 16px; background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; border:none; border-radius:6px; font-weight:700; cursor:pointer; transition:filter 0.2s; flex-shrink:0;" data-i18n="imagesSourceApplyBtn">
+                            <span id="images-source-path-display" style="flex:1; font-size:0.85rem; color:#cbd5e1; font-family:monospace; word-break:break-all;"></span>
+                            <button id="btn-images-source-apply" class="btn btn-primary" style="white-space:nowrap; padding:8px 16px; flex-shrink:0;" data-i18n="imagesSourceApplyBtn">
                                 ▶️ Aplicar imágenes
                             </button>
-                            <button id="btn-images-source-remove" class="btn" data-i18n="imagesSourceRemoveBtn" data-i18n-title="imagesSourceRemoveTitle" title="Elimina del juego solo las imágenes que están en tu carpeta (no borra las originales de Hytale)" style="white-space:nowrap; padding:8px 14px; background:rgba(220,38,38,0.15); color:#fca5a5; border:1px solid rgba(220,38,38,0.35); border-radius:6px; font-weight:600; cursor:pointer; transition:all 0.2s; flex-shrink:0;">
+                            <button id="btn-images-source-remove" class="btn btn-danger" data-i18n="imagesSourceRemoveBtn" data-i18n-title="imagesSourceRemoveTitle" title="Elimina del juego solo las imágenes que están en tu carpeta (no borra las originales de Hytale)" style="white-space:nowrap; padding:8px 14px; flex-shrink:0;">
                                 🗑️ Quitar del juego
                             </button>
                         </div>
@@ -314,8 +337,6 @@
 
     <div id="toast" class="toast hidden"></div>
 
-    <button id="btn-help-validation" class="floating-help-btn" data-i18n="helpBtnLabel" data-i18n-title="helpBtnTitle" title="¿Ves un error de validación en Hytale? Haz clic para ver cómo solucionarlo">❓ Ayuda</button>
-
     <!-- Vista previa del fondo y los efectos de partículas -->
     <div id="modal-preview" class="preview-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="preview-title">
         <div class="preview-modal-dialog">
@@ -340,10 +361,46 @@
                         <label class="preview-field-label" for="preview-system-id" data-i18n="vfxNameLabel">Nombre del Efecto (SystemId)</label>
                         <input id="preview-system-id" type="text" data-field="SystemId" placeholder="Fireflies_GS">
                         <div class="preview-inspector-grid">
-                            <div><label for="preview-x" data-i18n="posXLabel">X · Horizontal</label><input id="preview-x" type="number" step="0.01" data-field="X"></div>
-                            <div><label for="preview-y" data-i18n="posYLabel">Y · Vertical</label><input id="preview-y" type="number" step="0.01" data-field="Y"></div>
-                            <div><label for="preview-z" data-i18n="posZLabel">Z · Profundidad</label><input id="preview-z" type="number" step="0.1" data-field="Z"></div>
-                            <div><label for="preview-scale" data-i18n="scaleLabel">Escala</label><input id="preview-scale" type="number" step="0.1" min="0.1" data-field="Scale"></div>
+                            <div class="inspector-slider-row">
+                                <div class="inspector-slider-header">
+                                    <label for="preview-x" data-i18n="posXLabel">X · Horizontal</label>
+                                    <span id="preview-x-val" class="inspector-badge">0.500</span>
+                                </div>
+                                <div class="slider-with-input">
+                                    <input id="preview-x-range" type="range" min="0.0" max="1.0" step="0.001" data-field="X">
+                                    <input id="preview-x" type="number" step="0.001" min="0.0" max="1.0" data-field="X">
+                                </div>
+                            </div>
+                            <div class="inspector-slider-row">
+                                <div class="inspector-slider-header">
+                                    <label for="preview-y" data-i18n="posYLabel">Y · Vertical</label>
+                                    <span id="preview-y-val" class="inspector-badge">0.500</span>
+                                </div>
+                                <div class="slider-with-input">
+                                    <input id="preview-y-range" type="range" min="0.0" max="1.0" step="0.001" data-field="Y">
+                                    <input id="preview-y" type="number" step="0.001" min="0.0" max="1.0" data-field="Y">
+                                </div>
+                            </div>
+                            <div class="inspector-slider-row">
+                                <div class="inspector-slider-header">
+                                    <label for="preview-z" data-i18n="posZLabel">Z · Profundidad</label>
+                                    <span id="preview-z-val" class="inspector-badge">10.0</span>
+                                </div>
+                                <div class="slider-with-input">
+                                    <input id="preview-z-range" type="range" min="0" max="60" step="0.5" data-field="Z">
+                                    <input id="preview-z" type="number" step="0.1" data-field="Z">
+                                </div>
+                            </div>
+                            <div class="inspector-slider-row">
+                                <div class="inspector-slider-header">
+                                    <label for="preview-scale" data-i18n="scaleLabel">Escala</label>
+                                    <span id="preview-scale-val" class="inspector-badge">1.0</span>
+                                </div>
+                                <div class="slider-with-input">
+                                    <input id="preview-scale-range" type="range" min="0.1" max="15.0" step="0.1" data-field="Scale">
+                                    <input id="preview-scale" type="number" step="0.1" min="0.1" data-field="Scale">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <p id="preview-empty-selection" class="preview-empty-selection" data-i18n="previewNoParticles">Agrega una partícula para editarla en la vista previa.</p>
@@ -386,6 +443,84 @@
 
             <div style="margin-top:18px; text-align:center;">
                 <button id="modal-help-restore-btn" class="btn btn-restore" data-i18n="helpModalRestoreBtn" style="padding:9px 22px;">🔄 Restaurar archivos originales ahora</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Configuración de Perfiles (Original de la Empresa y Personalizado del Usuario) -->
+    <div id="modal-profiles-config" class="profile-config-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-profiles-title">
+        <div class="profile-config-modal-dialog">
+            <button id="modal-profiles-close" style="position:absolute; top:14px; right:16px; background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; line-height:1;">✕</button>
+
+            <h2 id="modal-profiles-title" style="margin:0 0 8px 0; font-size:1.2rem; color:#a5b4fc; display:flex; align-items:center; gap:8px;">
+                <span>⚙️</span> <span data-i18n="profilesModalTitle">Administrador de Perfiles</span>
+            </h2>
+            <p style="font-size:0.84rem; color:#94a3b8; margin:0 0 18px 0;" data-i18n="profilesModalSubtitle">
+                Controla el perfil original oficial del juego (snapshot limpio) y tu perfil personalizado con partículas, imágenes y configuraciones.
+            </p>
+
+            <!-- Sección 1: Perfil Original (Empresa / Hytale) -->
+            <div class="profile-card-section highlight-original">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                    <div>
+                        <h3 style="margin:0; font-size:1rem; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+                            <span>🏢</span> <span data-i18n="profileOriginalTitle">Perfil Original (Hytale Oficial)</span>
+                        </h3>
+                        <p style="font-size:0.8rem; color:#cbd5e1; margin:4px 0 0 0;" data-i18n="profileOriginalDesc">
+                            Snapshot de los archivos limpios del equipo de Hytale (<code>MainMenuBackgrounds.json</code>, carrusel y home). Úsalo cuando salga una nueva versión con nuevas imágenes y partículas para guardarla como versión original oficial.
+                        </p>
+                    </div>
+                    <span id="profile-original-status-badge" style="font-size:0.75rem; padding:3px 8px; border-radius:12px; background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); font-weight:600;">
+                        Comprobando...
+                    </span>
+                </div>
+
+                <div id="profile-original-details" style="font-size:0.8rem; color:#94a3b8; margin-bottom:12px; background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:6px;">
+                    Estado: consultando archivos originales...
+                </div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button id="btn-save-original-profile" class="btn btn-secondary" style="background:#0284c7; color:#ffffff; border:none;" title="Guardar la versión limpia actual como original de la empresa">
+                        💾 Guardar esta nueva versión como original
+                    </button>
+                    <button id="btn-restore-originals" class="btn btn-restore" title="Restaurar los archivos originales antes de actualizar en el launcher">
+                        🔄 Restaurar archivos limpios al juego
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sección 2: Perfil Personalizado (Usuario) -->
+            <div class="profile-card-section highlight-custom">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                    <div>
+                        <h3 style="margin:0; font-size:1rem; color:#34d399; display:flex; align-items:center; gap:6px;">
+                            <span>🎨</span> <span data-i18n="profileCustomTitle">Perfil Personalizado del Usuario</span>
+                        </h3>
+                        <p style="font-size:0.8rem; color:#cbd5e1; margin:4px 0 0 0;" data-i18n="profileCustomDesc">
+                            Contiene todas tus partículas 3D, imágenes personalizadas, visibilidad de noticias y posición del personaje. Puedes volver a ponerlas en el juego en cualquier momento con un solo clic.
+                        </p>
+                    </div>
+                    <span id="profile-custom-status-badge" style="font-size:0.75rem; padding:3px 8px; border-radius:12px; background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4); font-weight:600;">
+                        Comprobando...
+                    </span>
+                </div>
+
+                <div id="profile-custom-details" style="font-size:0.8rem; color:#94a3b8; margin-bottom:12px; background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:6px;">
+                    Estado: consultando personalizaciones...
+                </div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button id="btn-save-custom-profile" class="btn btn-primary" title="Guardar las partículas, imágenes y configuraciones actuales como tu perfil personalizado">
+                        💾 Guardar configuración de perfil personalizado
+                    </button>
+                    <button id="btn-apply-custom-profile" class="btn btn-success" title="Reaplicar tus partículas, imágenes y configuraciones al juego">
+                        🔁 Volver a poner mi personalización (Partículas e Imágenes)
+                    </button>
+                </div>
+            </div>
+
+            <div style="text-align:right; margin-top:10px;">
+                <button id="modal-profiles-ok" class="btn btn-secondary" style="padding:8px 18px;">Cerrar</button>
             </div>
         </div>
     </div>
