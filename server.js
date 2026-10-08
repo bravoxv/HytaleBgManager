@@ -1261,7 +1261,23 @@ app.get('/api/config', (req, res) => {
 
 app.post('/api/config', (req, res) => {
   const version = req.query.version || 'pre-release';
-  const { jsonPath } = getPathsForVersion(version);
+  const paths = getPathsForVersion(version);
+  const cfg = loadConfig();
+  const files = getManagedProfileFiles(version, paths);
+  const originalSaved = files.length > 0 && files.every(file => fs.existsSync(file.backup));
+  const needsOriginalSnapshot = Boolean(cfg.pendingOriginalProfiles && cfg.pendingOriginalProfiles[version]);
+
+  // Si no se guardó la configuración original del juego o hay una nueva versión esperando snapshot,
+  // se bloquea el guardado para evitar sobrescribir los archivos limpios sin respaldo.
+  if ((!originalSaved || needsOriginalSnapshot) && !req.query.force && !req.body._forceSave) {
+    return res.json({
+      success: false,
+      requireOriginalFirst: true,
+      error: 'Debes ir a Perfiles y guardar primero la configuración original del juego antes de guardar tus personalizaciones.'
+    });
+  }
+
+  const { jsonPath } = paths;
   try {
     const dir = path.dirname(jsonPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -1271,9 +1287,6 @@ app.post('/api/config', (req, res) => {
 
     // Guardar personalización del usuario separada en config.json
     saveUserCustomization(version, { bgConfig: req.body });
-
-    // Nota: NO se actualiza lastKnownVersionHashes aquí.
-    // El hash trackea la carpeta del juego (archivos que no modificamos), no nuestras escrituras.
 
     res.json({ success: true });
   } catch (err) {

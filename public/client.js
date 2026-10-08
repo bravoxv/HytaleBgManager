@@ -90,7 +90,8 @@ const translations = {
         profileOriginalTitle: "Perfil Original (Hytale Oficial)",
         profileOriginalDesc: "Snapshot de los archivos limpios del equipo de Hytale (MainMenuBackgrounds.json, carrusel y home). Úsalo cuando salga una nueva versión con nuevas imágenes y partículas para guardarla como versión original oficial.",
         profileCustomTitle: "Perfil Personalizado del Usuario",
-        profileCustomDesc: "Contiene todas tus partículas 3D, imágenes personalizadas, visibilidad de noticias y posición del personaje. Puedes volver a ponerlas en el juego en cualquier momento con un solo clic."
+        profileCustomDesc: "Contiene todas tus partículas 3D, imágenes personalizadas, visibilidad de noticias y posición del personaje. Puedes volver a ponerlas en el juego en cualquier momento con un solo clic.",
+        warnSaveOriginalFirst: "⚠️ Debes ir a Perfiles y guardar primero la configuración original del juego antes de guardar tus cambios personalizados."
     },
     en: {
         versionLabel: "Version:", openTexturesFolder: "📁 Open Textures Folder",
@@ -178,7 +179,8 @@ const translations = {
         profileOriginalTitle: "Original Profile (Official Hytale)",
         profileOriginalDesc: "Clean snapshot of official Hytale files (MainMenuBackgrounds.json, carousel, and home). When a new game update arrives with new images and particles from the Hytale team, save it as the new original official version.",
         profileCustomTitle: "Custom User Profile",
-        profileCustomDesc: "Holds all your 3D particles, custom images, news carousel and character settings. Re-apply them back to the game anytime with one click."
+        profileCustomDesc: "Holds all your 3D particles, custom images, news carousel and character settings. Re-apply them back to the game anytime with one click.",
+        warnSaveOriginalFirst: "⚠️ Please go to Profiles and save the clean original game configuration before saving your customizations."
     },
     pt: {
         versionLabel: "Versão:", openTexturesFolder: "📁 Abrir Pasta de Texturas",
@@ -240,7 +242,7 @@ const translations = {
         restoreOriginalsTooltip: "Saiu uma nova versão do Hytale? Use este botão ANTES de atualizar para restaurar os arquivos originais e evitar erros no launcher.",
         clearPathTitle: "Limpar caminho salvo",
         openFolderTitle: "Abrir pasta de texturas BackgroundImages",
-        refreshPresetsTitle: "Atualizar lista de imagens disponíveis",
+        refreshPresetsTitle: "Atualizar lista de imagens disponibles",
         refreshPresetsBtn: "🔄 Atualizar",
         refreshPresetsDone: "✅ Atualizado",
         badgeTextures: "Pasta BackgroundImages",
@@ -266,7 +268,8 @@ const translations = {
         profileOriginalTitle: "Perfil Original (Oficial Hytale)",
         profileOriginalDesc: "Snapshot dos arquivos limpos da equipe Hytale (MainMenuBackgrounds.json, carrossel e home). Quando sair uma nova versão com novas imagens e partículas da equipe Hytale, salve-a como nova versão original oficial.",
         profileCustomTitle: "Perfil Personalizado do Usuário",
-        profileCustomDesc: "Contém todas as suas partículas 3D, imagens personalizadas, visibilidade de notícias e posição do personagem. Reaplique tudo no jogo a qualquer momento com um clique."
+        profileCustomDesc: "Contém todas as suas partículas 3D, imagens personalizadas, visibilidade de notícias e posição do personagem. Reaplique tudo no jogo a qualquer momento com um clique.",
+        warnSaveOriginalFirst: "⚠️ Você deve ir em Perfis e salvar primeiro a configuração original do juego antes de salvar suas personalizações."
     }
 };
 
@@ -586,7 +589,12 @@ async function init() {
             btnSaveCustomProfile.textContent = '⏳ Guardando...';
             try {
                 // Primero asegurar que los cambios actuales se hayan guardado en los archivos si hay cambios pendientes
-                await saveConfig();
+                const saveRes = await saveConfig();
+                if (saveRes && saveRes.requireOriginalFirst) {
+                    btnSaveCustomProfile.disabled = false;
+                    btnSaveCustomProfile.textContent = '💾 Guardar configuración de perfil personalizado';
+                    return;
+                }
                 const res = await fetch(`/api/save-custom-profile?version=${encodeURIComponent(currentVersion)}`, { method: 'POST' }).then(r => r.json());
                 btnSaveCustomProfile.disabled = false;
                 btnSaveCustomProfile.textContent = res.success ? '✅ Perfil personalizado guardado' : '💾 Guardar configuración de perfil personalizado';
@@ -1424,13 +1432,52 @@ async function handleFileUpload(e) {
     }
 }
 
+async function checkOriginalSavedBeforeCustomizing() {
+    try {
+        const res = await fetch(`/api/profiles/status?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
+        if (res && res.success) {
+            if (!res.originalSaved || res.needsOriginalSnapshot) {
+                const t = translations[currentLang] || translations['es'];
+                const msg = t.warnSaveOriginalFirst || '⚠️ Debes ir a Perfiles y guardar primero la configuración original del juego antes de guardar tus cambios personalizados.';
+                showToast(msg, true);
+
+                // Abrir automáticamente el modal de Perfiles para que el usuario pueda guardarlo de inmediato
+                const modal = document.getElementById('modal-profiles-config');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    await refreshProfileStatus();
+                }
+                return false;
+            }
+        }
+    } catch (_) {}
+    return true;
+}
+
 async function saveConfig() {
     updateCurrentBgFromInputs();
+    const canSave = await checkOriginalSavedBeforeCustomizing();
+    if (!canSave) {
+        return { success: false, requireOriginalFirst: true };
+    }
+
     const res = await fetch(`/api/config?version=${encodeURIComponent(currentVersion)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(currentConfig)
     }).then(r => r.json());
+
+    if (!res.success && res.requireOriginalFirst) {
+        const t = translations[currentLang] || translations['es'];
+        showToast(t.warnSaveOriginalFirst || res.error, true);
+        const modal = document.getElementById('modal-profiles-config');
+        if (modal) {
+            modal.style.display = 'flex';
+            await refreshProfileStatus();
+        }
+        return res;
+    }
+
     showToast(res.success ? translations[currentLang].toastSaved : `Error: ${res.error}`, !res.success);
     return res;
 }
