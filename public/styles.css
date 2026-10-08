@@ -1325,3 +1325,21 @@ select:focus {
         bottom: 12px;
     }
 }
+
+/* Estado bloqueado cuando falta el perfil original limpio */
+.original-locked {
+    opacity: 0.55 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(0.35);
+    position: relative;
+    pointer-events: auto !important;
+}
+
+.original-locked * {
+    pointer-events: none !important;
+}
+
+.original-locked:hover {
+    transform: none !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4) !important;
+}

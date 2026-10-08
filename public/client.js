@@ -454,6 +454,8 @@ async function checkAppUpdate() {
 
 async function init() {
     fetch('/api/ping').catch(() => {});
+    document.addEventListener('click', handleOriginalLockedIntercept, true);
+    document.addEventListener('mousedown', handleOriginalLockedIntercept, true);
     await loadVersions();
     await checkGameVersionUpdate();
     await loadData();
@@ -1116,7 +1118,7 @@ function renderVfxList(vfxArray) {
     selectedPreviewParticle = Math.min(selectedPreviewParticle, vfxArray.length - 1);
     vfxArray.forEach((vfx, idx) => {
         const card = document.createElement('div');
-        card.className = 'vfx-card';
+        card.className = 'vfx-card' + (isOriginalLocked ? ' original-locked' : '');
         card.innerHTML = `
       <div class="vfx-row">
         <div class="vfx-input-group">
@@ -1564,10 +1566,84 @@ async function refreshProfileStatus() {
                 ? '🔁 Volver a poner mi personalización (Partículas e Imágenes)'
                 : '🔒 Sin perfil personalizado guardado';
         }
+
+        // Bloquear/desbloquear controles de personalización si no hay snapshot original oficial
+        applyOriginalLockUI(!res.originalSaved || res.needsOriginalSnapshot);
     } catch (e) {
         console.error('Error al consultar el estado de perfiles:', e);
     }
 }
+
+// Bloquea o desbloquea controles de personalización hasta que se guarde la versión original
+let isOriginalLocked = false;
+function applyOriginalLockUI(locked) {
+    isOriginalLocked = locked;
+    const lockableElements = [
+        btnOpenPreview,
+        btnSaveAll,
+        document.querySelector('label[for="file-upload"]'),
+        document.getElementById('btn-images-source-save'),
+        document.getElementById('btn-images-source-apply'),
+        document.getElementById('btn-images-source-remove'),
+        selectImgPreset,
+        selectBlurPreset,
+        imgNameInput,
+        blurredInput,
+        chkNewsVisible,
+        chkAvatarVisible,
+        avatarTopSlider,
+        avatarTopNum,
+        avatarLeftSlider,
+        avatarLeftNum,
+        btnApplyAvatar,
+        btnResetAvatar,
+        btnAddVfx,
+        btnApplyVfx
+    ].filter(Boolean);
+
+    lockableElements.forEach(el => {
+        if (locked) {
+            el.classList.add('original-locked');
+            if ('disabled' in el && el.tagName !== 'LABEL') {
+                el.setAttribute('data-lock-disabled', 'true');
+            }
+        } else {
+            el.classList.remove('original-locked');
+            el.removeAttribute('data-lock-disabled');
+        }
+    });
+
+    const vfxCards = vfxListEl ? vfxListEl.querySelectorAll('.vfx-card') : [];
+    vfxCards.forEach(card => {
+        if (locked) card.classList.add('original-locked');
+        else card.classList.remove('original-locked');
+    });
+}
+
+function handleOriginalLockedIntercept(e) {
+    if (!isOriginalLocked) return false;
+    const target = e.target;
+    // Si el clic fue dentro o sobre un elemento bloqueado (pero no dentro del modal de perfiles)
+    if (target.closest('#modal-profiles-config') || target.closest('#btn-open-profiles-modal') || target.closest('#version-select') || target.closest('#lang-select')) {
+        return false;
+    }
+    const lockedEl = target.closest('.original-locked');
+    if (lockedEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const t = translations[currentLang] || translations['es'];
+        showToast(t.warnSaveOriginalFirst || '⚠️ Debes ir a Perfiles y guardar primero la configuración original del juego antes de guardar tus personalizaciones.', true);
+        const modal = document.getElementById('modal-profiles-config');
+        if (modal) {
+            modal.style.display = 'flex';
+            refreshProfileStatus();
+        }
+        return true;
+    }
+    return false;
+}
+
 
 function showToast(msg, isError = false) {
     clearTimeout(toastEl._timeout);

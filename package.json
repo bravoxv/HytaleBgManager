@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "description": "Editor visual de fondos del menú principal de Hytale",
   "main": "main.js",
-  "commit": "09068832163df3e9e370d5d83675a3887031a812",
+  "commit": "acd864399242a91935cd616d61f07dccf5a39457",
   "githubRepo": "bravoxv/HytaleBgManager",
   "scripts": {
     "start": "electron .",
