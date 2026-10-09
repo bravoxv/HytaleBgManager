@@ -1676,7 +1676,6 @@ const btnLinuxScan = document.getElementById('btn-linux-scan');
 const linuxStatusSummary = document.getElementById('linux-status-summary');
 const badgeJson = document.getElementById('badge-json');
 const badgeTextures = document.getElementById('badge-textures');
-const badgeNews = document.getElementById('badge-news');
 const badgeHomepage = document.getElementById('badge-homepage');
 
 function updateFileBadges(detected, details = {}) {
@@ -1705,19 +1704,6 @@ function updateFileBadges(detected, details = {}) {
 
     setBadge(badgeJson, 'MainMenuBackgrounds.json', hasJson && detected);
     setBadge(badgeTextures, t.badgeTextures || 'Carpeta BackgroundImages', hasTextures && detected);
-    if (badgeNews) {
-        if (hasNews && detected) {
-            badgeNews.innerHTML = '✅ NewsTilesCarousel.ui';
-            badgeNews.style.background = 'rgba(16, 185, 129, 0.15)';
-            badgeNews.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-            badgeNews.style.color = '#34d399';
-        } else {
-            badgeNews.innerHTML = '⚪ NewsTilesCarousel.ui (opcional)';
-            badgeNews.style.background = 'rgba(148, 163, 184, 0.12)';
-            badgeNews.style.borderColor = 'rgba(148, 163, 184, 0.25)';
-            badgeNews.style.color = '#94a3b8';
-        }
-    }
     setBadge(badgeHomepage, 'HomePage.ui', hasHome && detected);
 
     if (linuxStatusSummary) {
