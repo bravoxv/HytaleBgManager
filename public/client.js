@@ -11,9 +11,6 @@ const translations = {
         pngHelpText: "Solo se permiten archivos .png. Se copian automáticamente a BackgroundImages de la versión seleccionada.",
         mainImageLabel: "Imagen Principal (Image):", blurredImageLabel: "Imagen Desenfocada (BlurredImage):",
         selectFromFolder: "-- Seleccionar --",
-        newsSectionTitle: "📰 Tarjetas de Noticias (NewsTilesCarousel)",
-        newsSectionHelp: "Oculta o muestra el panel de noticias transparente en el menú principal.",
-        newsStatusText: "Estado en configuración UI:", newsStatusVisible: "true (Visible)", newsStatusHidden: "false (Invisible / Oculto)",
         vfxTitle: "✨ Efectos de Partículas (VFX)", vfxGuideLink: "🌐 Guía OrbisHytale",
         applyVfxChanges: "✅ Aplicar Partículas", addParticle: "+ Agregar Partícula",
         vfxHelpText: "Añade efectos visuales 3D especificando nombre, posición y escala.",
@@ -100,9 +97,6 @@ const translations = {
         pngHelpText: "Only .png files allowed. Automatically copied to BackgroundImages for selected version.",
         mainImageLabel: "Main Image (Image):", blurredImageLabel: "Blurred Image (BlurredImage):",
         selectFromFolder: "-- Select --",
-        newsSectionTitle: "📰 News Carousel (NewsTilesCarousel)",
-        newsSectionHelp: "Hide or show the transparent news panel on the main menu.",
-        newsStatusText: "UI Config status:", newsStatusVisible: "true (Visible)", newsStatusHidden: "false (Invisible / Hidden)",
         vfxTitle: "✨ Particle Effects (VFX)", vfxGuideLink: "🌐 OrbisHytale Guide",
         applyVfxChanges: "✅ Apply Particles", addParticle: "+ Add Particle",
         vfxHelpText: "Add 3D visual effects specifying name, position and scale.",
@@ -179,7 +173,7 @@ const translations = {
         profileOriginalTitle: "Original Profile (Official Hytale)",
         profileOriginalDesc: "Clean snapshot of official Hytale files (MainMenuBackgrounds.json, carousel, and home). When a new game update arrives with new images and particles from the Hytale team, save it as the new original official version.",
         profileCustomTitle: "Custom User Profile",
-        profileCustomDesc: "Holds all your 3D particles, custom images, news carousel and character settings. Re-apply them back to the game anytime with one click.",
+        profileCustomDesc: "Holds all your 3D particles, custom images, and character settings. Re-apply them back to the game anytime with one click.",
         warnSaveOriginalFirst: "⚠️ Please go to Profiles and save the clean original game configuration before saving your customizations."
     },
     pt: {
@@ -189,9 +183,6 @@ const translations = {
         pngHelpText: "Apenas arquivos .png. Copiados automaticamente para BackgroundImages da versão seleccionada.",
         mainImageLabel: "Imagem Principal (Image):", blurredImageLabel: "Imagem Desfocada (BlurredImage):",
         selectFromFolder: "-- Selecionar --",
-        newsSectionTitle: "📰 Cartões de Notícias (NewsTilesCarousel)",
-        newsSectionHelp: "Ocultar ou mostrar o painel transparente de notícias no menu principal.",
-        newsStatusText: "Estado da config UI:", newsStatusVisible: "true (Visível)", newsStatusHidden: "false (Invisível / Oculto)",
         vfxTitle: "✨ Efeitos de Partículas (VFX)", vfxGuideLink: "🌐 Guia OrbisHytale",
         applyVfxChanges: "✅ Aplicar Partículas", addParticle: "+ Adicionar Partícula",
         vfxHelpText: "Adicione efeitos 3D especificando nome, posição e escala.",
@@ -301,8 +292,6 @@ const btnApplyVfx = document.getElementById('btn-apply-vfx');
 const vfxListEl = document.getElementById('vfx-list');
 const toastEl = document.getElementById('toast');
 
-const chkNewsVisible = document.getElementById('chk-news-visible');
-const newsStatusLabel = document.getElementById('news-status-label');
 
 const chkAvatarVisible = document.getElementById('chk-avatar-visible');
 const avatarStatusLabel = document.getElementById('avatar-status-label');
@@ -328,7 +317,6 @@ async function checkGameVersionUpdate() {
             if (startup.updatesDetected) {
                 showToast(translations[currentLang].toastUpdateSynced || '⚡ ¡Actualización de Hytale detectada! Personalizaciones reaplicadas.');
                 await loadData();
-                await loadNewsStatus();
                 await loadAvatarStatus();
                 await refreshTexturePresets();
                 return; // El servidor ya manejó todo, no hace falta re-chequear
@@ -347,7 +335,6 @@ async function checkGameVersionUpdate() {
         if (res.success && res.updated && res.reapplied) {
             showToast(translations[currentLang].toastUpdateSynced || '⚡ ¡Actualización detectada! Personalización reaplicada.');
             await loadData();
-            await loadNewsStatus();
             await loadAvatarStatus();
             await refreshTexturePresets();
         }
@@ -459,7 +446,6 @@ async function init() {
     await loadVersions();
     await checkGameVersionUpdate();
     await loadData();
-    await loadNewsStatus();
     await loadAvatarStatus();
     await refreshTexturePresets();
     await refreshProfileStatus();
@@ -470,7 +456,6 @@ async function init() {
         currentVersion = e.target.value;
         await checkGameVersionUpdate();
         const dataRes = await loadData();
-        await loadNewsStatus();
         await loadAvatarStatus();
         await refreshTexturePresets();
         await refreshProfileStatus();
@@ -542,7 +527,6 @@ async function init() {
                     // Recargar toda la interfaz para reflejar el estado limpio original
                     await loadData();
                     await loadAvatarStatus();
-                    await loadNewsStatus();
 
                     // Volver al estado normal después de unos segundos
                     setTimeout(() => {
@@ -621,7 +605,6 @@ async function init() {
                 showToast(res.success ? `✅ Perfil personalizado reaplicado en ${currentVersion}.` : `❌ ${res.error || 'No hay perfil personalizado guardado.'}`, !res.success);
                 if (res.success) {
                     await loadData();
-                    await loadNewsStatus();
                     await loadAvatarStatus();
                     await refreshTexturePresets();
                 }
@@ -634,7 +617,6 @@ async function init() {
         });
     }
 
-    chkNewsVisible.addEventListener('change', toggleNewsVisibility);
     chkAvatarVisible.addEventListener('change', applyAvatarChanges);
     btnApplyAvatar.addEventListener('click', applyAvatarChanges);
     if (btnResetAvatar) btnResetAvatar.addEventListener('click', resetAvatarDefault);
@@ -945,40 +927,6 @@ function updateLanguageUI() {
         const key = el.getAttribute('data-i18n-title');
         if (t[key]) el.title = t[key];
     });
-    updateNewsLabel(chkNewsVisible.checked);
-}
-
-async function loadNewsStatus() {
-    const res = await fetch(`/api/news-status?version=${encodeURIComponent(currentVersion)}`).then(r => r.json());
-    if (res.success) {
-        chkNewsVisible.checked = res.visible;
-        updateNewsLabel(res.visible);
-    }
-}
-
-function updateNewsLabel(isVisible) {
-    const t = translations[currentLang] || translations['es'];
-    if (isVisible) {
-        newsStatusLabel.textContent = t.newsStatusVisible;
-        newsStatusLabel.style.color = '#10b981';
-    } else {
-        newsStatusLabel.textContent = t.newsStatusHidden;
-        newsStatusLabel.style.color = '#ef4444';
-    }
-}
-
-async function toggleNewsVisibility() {
-    const isVisible = chkNewsVisible.checked;
-    updateNewsLabel(isVisible);
-    const res = await fetch(`/api/news-status?version=${encodeURIComponent(currentVersion)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visible: isVisible })
-    }).then(r => r.json());
-
-    if (!res.success) {
-        showToast('Error: ' + res.error, true);
-    }
 }
 
 async function loadAvatarStatus() {
@@ -1589,7 +1537,6 @@ function applyOriginalLockUI(locked) {
         selectBlurPreset,
         imgNameInput,
         blurredInput,
-        chkNewsVisible,
         chkAvatarVisible,
         avatarTopSlider,
         avatarTopNum,
@@ -1699,7 +1646,6 @@ function updateFileBadges(detected, details = {}) {
 
     const hasJson = !!(details.jsonPath && (details.jsonPathExists !== undefined ? details.jsonPathExists : (typeof details.jsonPath === 'string' && !details.jsonPath.includes('undefined'))));
     const hasTextures = !!(details.texturesDir && (details.texturesDirExists !== undefined ? details.texturesDirExists : true));
-    const hasNews = !!(details.newsCarouselPath && (details.newsCarouselPathExists !== undefined ? details.newsCarouselPathExists : true));
     const hasHome = !!(details.homePagePath && (details.homePagePathExists !== undefined ? details.homePagePathExists : true));
 
     setBadge(badgeJson, 'MainMenuBackgrounds.json', hasJson && detected);
@@ -1825,7 +1771,6 @@ if (btnClearPath) {
 async function reloadAllData() {
     await loadVersions();
     await loadData();
-    await loadNewsStatus();
     await loadAvatarStatus();
     await refreshTexturePresets();
 }

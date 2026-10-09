@@ -118,9 +118,8 @@ app.get('/api/startup-status', (req, res) => {
 // POST /api/restore-originals
 // Restaura TODOS los archivos del juego a su estado original desde los backups limpios:
 // 1. Restaura MainMenuBackgrounds.json (fondo y partículas oficiales por defecto)
-// 2. Restaura NewsTilesCarousel.ui (panel de noticias visible original)
-// 3. Restaura HomePage.ui (personaje en posición y visibilidad oficial por defecto)
-// 4. Elimina de BackgroundImages las imágenes PNG añadidas por el usuario (desde su carpeta de origen o perfil)
+// 2. Restaura HomePage.ui (personaje en posición y visibilidad oficial por defecto)
+// 3. Elimina de BackgroundImages las imágenes PNG añadidas por el usuario (desde su carpeta de origen o perfil)
 app.post('/api/restore-originals', (req, res) => {
   try {
     const versions = getVersions();
@@ -138,9 +137,6 @@ app.post('/api/restore-originals', (req, res) => {
         { id: `${ver}_HomePage.ui`, target: paths.homePagePath },
         { id: `${ver}_MainMenuBackgrounds.json`, target: paths.jsonPath }
       ];
-      if (paths.newsCarouselPath) {
-        filesToRestore.push({ id: `${ver}_NewsTilesCarousel.ui`, target: paths.newsCarouselPath });
-      }
 
       const verResult = { restored: [], notFound: [], removedImages: [] };
       for (const { id, target } of filesToRestore) {
@@ -149,13 +145,6 @@ app.post('/api/restore-originals', (req, res) => {
           verResult.restored.push(target);
         } else {
           verResult.notFound.push(id);
-          // Si no había backup pero es NewsTilesCarousel y el archivo existe, forzar DEFAULT_NEWS_UI
-          if (id.endsWith('_NewsTilesCarousel.ui') && fs.existsSync(target)) {
-            try {
-              fs.writeFileSync(target, DEFAULT_NEWS_UI, 'utf8');
-              verResult.restored.push(target);
-            } catch (_) {}
-          }
         }
       }
 
@@ -241,7 +230,7 @@ app.get('/api/profiles/status', (req, res) => {
   const files = getManagedProfileFiles(version, paths);
   const custom = cfg.userCustomizations && cfg.userCustomizations[version];
   const hasCustomProfile = Boolean(custom && (
-    custom.bgConfig || custom.newsVisible !== undefined || custom.avatarConfig
+    custom.bgConfig || custom.avatarConfig
   ));
 
   let customVfxCount = 0;
@@ -271,8 +260,7 @@ app.get('/api/profiles/status', (req, res) => {
       vfxCount: customVfxCount,
       imagesCount: customImages.length,
       images: customImages,
-      hasAvatarConfig: Boolean(custom.avatarConfig),
-      hasNewsConfig: custom.newsVisible !== undefined
+      hasAvatarConfig: Boolean(custom.avatarConfig)
     } : null
   });
 });
@@ -325,12 +313,6 @@ app.post('/api/save-custom-profile', (req, res) => {
       bgConfig = JSON.parse(fs.readFileSync(paths.jsonPath, 'utf8'));
     }
 
-    let newsVisible = true;
-    if (paths.newsCarouselPath && fs.existsSync(paths.newsCarouselPath)) {
-      const content = fs.readFileSync(paths.newsCarouselPath, 'utf8');
-      newsVisible = !(/@CardWidth\s*=\s*0|Width:\s*0,\s*Height:\s*0/i.test(content));
-    }
-
     let avatarConfig = { visible: true, top: 320, left: 0 };
     if (paths.homePagePath && fs.existsSync(paths.homePagePath)) {
       const content = fs.readFileSync(paths.homePagePath, 'utf8');
@@ -351,7 +333,6 @@ app.post('/api/save-custom-profile', (req, res) => {
 
     saveUserCustomization(version, {
       bgConfig: bgConfig || { Groups: [{ Backgrounds: [] }] },
-      newsVisible,
       avatarConfig
     });
 
@@ -434,9 +415,6 @@ function getManagedProfileFiles(version, paths) {
     { id: `${version}_MainMenuBackgrounds.json`, name: 'MainMenuBackgrounds.json', target: paths.jsonPath },
     { id: `${version}_HomePage.ui`, name: 'HomePage.ui', target: paths.homePagePath }
   ];
-  if (paths.newsCarouselPath && fs.existsSync(paths.newsCarouselPath)) {
-    list.push({ id: `${version}_NewsTilesCarousel.ui`, name: 'NewsTilesCarousel.ui', target: paths.newsCarouselPath });
-  }
   return list.map(file => ({ ...file, backup: path.join(getBackupsDir(), `${file.id}.original`) }));
 }
 
@@ -495,7 +473,7 @@ function restoreFromBackup(identifier, targetFilePath) {
 // Calcula el hash de la CARPETA del juego (no de los archivos que nosotros modificamos).
 // Hashea nombres + tamaños de los archivos directos de la carpeta Client/Data/Game/,
 // excluyendo los archivos que HytaleBgManager modifica para evitar falsos positivos.
-const MANAGED_FILES = new Set(['MainMenuBackgrounds.json', 'NewsTilesCarousel.ui', 'HomePage.ui']);
+const MANAGED_FILES = new Set(['MainMenuBackgrounds.json', 'HomePage.ui']);
 
 function computeGameVersionHash(paths) {
   try {
@@ -711,18 +689,6 @@ function applyCustomizationToGame(version) {
     }
   }
 
-  // 2. Re-aplicar News Carousel (.ui)
-  if (custom.newsVisible !== undefined && paths.newsCarouselPath) {
-    try {
-      const dir = path.dirname(paths.newsCarouselPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const targetContent = custom.newsVisible ? DEFAULT_NEWS_UI : INVISIBLE_ZERO_NEWS_UI;
-      fs.writeFileSync(paths.newsCarouselPath, targetContent, 'utf8');
-      changed = true;
-    } catch (e) {
-      console.error('[Sync] Error al aplicar newsVisible:', e);
-    }
-  }
 
   // 3. Re-aplicar Avatar Preview (.ui): leer archivo limpio del juego y aplicar parche
   if (custom.avatarConfig && paths.homePagePath && fs.existsSync(paths.homePagePath)) {
@@ -778,9 +744,6 @@ function checkAndHandleVersionUpdate(version) {
     vHashes[version] = currentHash;
     saveConfig({ lastKnownVersionHashes: vHashes });
     ensureOriginalBackup(paths.jsonPath,         `${version}_MainMenuBackgrounds.json`);
-    if (paths.newsCarouselPath && fs.existsSync(paths.newsCarouselPath)) {
-      ensureOriginalBackup(paths.newsCarouselPath,  `${version}_NewsTilesCarousel.ui`);
-    }
     ensureOriginalBackup(paths.homePagePath,      `${version}_HomePage.ui`);
     try {
       if (paths.jsonPath && fs.existsSync(paths.jsonPath)) {
@@ -811,7 +774,6 @@ function findHytaleFilesRecursively(startDir, maxDepth = 12) {
   const results = {
     jsonPath: null,
     texturesDir: null,
-    newsCarouselPath: null,
     homePagePath: null,
     installBase: null,
   };
@@ -830,8 +792,6 @@ function findHytaleFilesRecursively(startDir, maxDepth = 12) {
       if (entry.isFile()) {
         if (entry.name === 'MainMenuBackgrounds.json' && !results.jsonPath) {
           results.jsonPath = fullPath;
-        } else if (entry.name === 'NewsTilesCarousel.ui' && !results.newsCarouselPath) {
-          results.newsCarouselPath = fullPath;
         } else if (entry.name === 'HomePage.ui' && !results.homePagePath) {
           results.homePagePath = fullPath;
         }
@@ -955,7 +915,6 @@ function getPathsForVersion(ver) {
         return {
           jsonPath: standardJson,
           texturesDir: path.join(cand, 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages'),
-          newsCarouselPath: path.join(cand, 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui'),
           homePagePath: path.join(cand, 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui'),
         };
       }
@@ -965,7 +924,6 @@ function getPathsForVersion(ver) {
         return {
           jsonPath: foundInCand.jsonPath,
           texturesDir: foundInCand.texturesDir || '',
-          newsCarouselPath: foundInCand.newsCarouselPath || '',
           homePagePath: foundInCand.homePagePath || '',
         };
       }
@@ -978,7 +936,6 @@ function getPathsForVersion(ver) {
     return {
       jsonPath:         rp.jsonPath         || '',
       texturesDir:      rp.texturesDir      || '',
-      newsCarouselPath: rp.newsCarouselPath  || '',
       homePagePath:     rp.homePagePath      || '',
     };
   }
@@ -988,214 +945,10 @@ function getPathsForVersion(ver) {
   return {
     jsonPath:         path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'MainMenuBackgrounds.json'),
     texturesDir:      path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Shared', 'UI', 'Textures', 'BackgroundImages'),
-    newsCarouselPath: path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'NewsTilesCarousel.ui'),
     homePagePath:     path.join(installBase, safeVer, 'package', 'game', 'latest', 'Client', 'Data', 'Game', 'Interface', 'MainMenu', 'HomePage.ui'),
   };
 }
 
-// Plantilla por defecto (Original / Default)
-const DEFAULT_NEWS_UI = `$Common = "../Common.ui";
-$Sounds = "../Sounds.ui";
-
-@CardWidth = 504;
-@CardHeight = 467;
-@ImageHeight = 233;
-
-Group #Carousel {
-  Anchor: (Right: 59, Bottom: 200, Width: @CardWidth, Height: @CardHeight);
-
-  Group #Card {
-    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-    Background: (TexturePath: "EAContainer.png", Border: 8);
-    LayoutMode: Top;
-    Padding: (Bottom: 50);
-
-    Group #ImageArea {
-      Anchor: (Height: @ImageHeight, Top: -15);
-      MaskTexturePath: "NewsTileImageMask.png";
-
-      Group #ImagePlaceholder {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-        Background: #2a2f36ff;
-      }
-
-      Group #Image {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      }
-
-      Group #BottomFade {
-        Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 72);
-        Background: "NewsTileBottomFade.png";
-      }
-    }
-
-    Label #Title {
-      Style: (FontName: "Secondary", FontSize: 22, RenderBold: true, RenderUppercase: true, TextColor: #ffffff(0.95), HorizontalAlignment: Center);
-      Padding: (Top: 12, Horizontal: 32);
-    }
-
-    Group {
-      Anchor: (Height: 7, Width: 441, Top: 8, Bottom: 14);
-      Background: "EADivider.png";
-    }
-
-    Label #Body {
-      Style: (FontSize: 18, Wrap: true, TextColor: #ffffff(0.82), HorizontalAlignment: Center);
-      Padding: (Horizontal: 32);
-    }
-  }
-
-  Group #DotsContainer {
-    Anchor: (Height: 10, Bottom: 16, Left: 0, Right: 0);
-    LayoutMode: Center;
-    Visible: false;
-  }
-
-  Button #ClickOverlay {
-    Visible: false;
-    Anchor: (Left: 0, Right: 0, Top: -15, Height: @ImageHeight);
-    Style: (
-      Default: (Background: #ffffff(0)),
-      Hovered: (Background: #ffffff(0.06)),
-      Pressed: (Background: #ffffff(0.10)),
-      Sounds: $Sounds.@ButtonsLight
-    );
-  }
-
-  Button #PrevButton {
-    Visible: false;
-    Anchor: (Width: 70, Height: @CardHeight, Top: 0, Left: 0);
-    TooltipText: %client.mainMenu.newsTiles.prevButton.tooltip;
-    Style: (
-      Default: (Background: #ffffff(0)),
-      Hovered: (Background: PatchStyle(TexturePath: "NewsTileNavGradientLeft.png", Color: #ffffff(0.70))),
-      Pressed: (Background: PatchStyle(TexturePath: "NewsTileNavGradientLeft.png", Color: #ffffff(1.0))),
-      Sounds: $Sounds.@ButtonsLight
-    );
-
-    LayoutMode: CenterMiddle;
-
-    Group {
-      Anchor: (Width: 18, Height: 24);
-      Background: "NewsTileArrowLeft.png";
-    }
-  }
-
-  Button #NextButton {
-    Visible: false;
-    Anchor: (Width: 70, Height: @CardHeight, Top: 0, Right: 0);
-    TooltipText: %client.mainMenu.newsTiles.nextButton.tooltip;
-    Style: (
-      Default: (Background: #ffffff(0)),
-      Hovered: (Background: PatchStyle(TexturePath: "NewsTileNavGradientRight.png", Color: #ffffff(0.70))),
-      Pressed: (Background: PatchStyle(TexturePath: "NewsTileNavGradientRight.png", Color: #ffffff(1.0))),
-      Sounds: $Sounds.@ButtonsLight
-    );
-
-    LayoutMode: CenterMiddle;
-
-    Group {
-      Anchor: (Width: 18, Height: 24);
-      Background: "NewsTileArrowRight.png";
-    }
-  }
-}
-`;
-
-// Plantilla Invisible / Oculto en 0
-const INVISIBLE_ZERO_NEWS_UI = `$Common = "../Common.ui";
-$Sounds = "../Sounds.ui";
-
-@CardWidth = 0;
-@CardHeight = 0;
-@ImageHeight = 0;
-
-Group #Carousel {
-  Anchor: (Right: 0, Bottom: 0, Width: 0, Height: 0);
-
-  Group #Card {
-    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-    LayoutMode: Top;
-
-    Group #ImageArea {
-      Anchor: (Height: 0, Top: 0);
-
-      Group #ImagePlaceholder {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      }
-
-      Group #Image {
-        Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-      }
-
-      Group #BottomFade {
-        Anchor: (Left: 0, Right: 0, Bottom: 0, Height: 0);
-      }
-    }
-
-    Label #Title {
-      Style: (FontName: "Secondary", FontSize: 0, RenderBold: false, RenderUppercase: false, TextColor: #ffffff(0.0), HorizontalAlignment: Center);
-      Text: "";
-    }
-
-    Group {
-      Anchor: (Height: 0, Width: 0, Top: 0, Bottom: 0);
-    }
-
-    Label #Body {
-      Style: (FontSize: 0, Wrap: false, TextColor: #ffffff(0.0), HorizontalAlignment: Center);
-      Text: "";
-    }
-  }
-
-  Group #DotsContainer {
-    Anchor: (Height: 0, Bottom: 0, Left: 0, Right: 0);
-    LayoutMode: Center;
-  }
-
-  Button #ClickOverlay {
-    Anchor: (Left: 0, Right: 0, Top: 0, Height: 0);
-    Style: (
-      Default: (Background: #ffffff(0)),
-      Hovered: (Background: #ffffff(0)),
-      Pressed: (Background: #ffffff(0)),
-      Sounds: ()
-    );
-  }
-
-  Button #PrevButton {
-    Anchor: (Width: 0, Height: 0, Top: 0, Left: 0);
-    Style: (
-      Default: (Background: #ffffff(0)),
-      Hovered: (Background: #ffffff(0)),
-      Pressed: (Background: #ffffff(0)),
-      Sounds: ()
-    );
-
-    LayoutMode: CenterMiddle;
-
-    Group {
-      Anchor: (Width: 0, Height: 0);
-    }
-  }
-
-  Button #NextButton {
-    Anchor: (Width: 0, Height: 0, Top: 0, Right: 0);
-    Style: (
-      Default: (Background: #ffffff(0)),
-      Hovered: (Background: #ffffff(0)),
-      Pressed: (Background: #ffffff(0)),
-      Sounds: ()
-    );
-
-    LayoutMode: CenterMiddle;
-
-    Group {
-      Anchor: (Width: 0, Height: 0);
-    }
-  }
-}
-`;
 
 // ── Avatar / HomePage API ──────────────────────────────────────────────────
 // GET: devuelve la config actual del #AvatarPreview (visible, top, left, width, height)
@@ -1283,46 +1036,6 @@ app.get('/api/check-version', (req, res) => {
   try {
     const checkResult = checkAndHandleVersionUpdate(version);
     res.json({ success: true, version, ...checkResult });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
-});
-
-app.get('/api/news-status', (req, res) => {
-  const version = req.query.version || 'pre-release';
-  const { newsCarouselPath } = getPathsForVersion(version);
-  try {
-    if (!fs.existsSync(newsCarouselPath)) {
-      return res.json({ success: true, visible: true, exists: false });
-    }
-    const content = fs.readFileSync(newsCarouselPath, 'utf8');
-    const isZeroInvisible = /@CardWidth\s*=\s*0|Width:\s*0,\s*Height:\s*0/i.test(content);
-    res.json({ success: true, visible: !isZeroInvisible, exists: true });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
-});
-
-app.post('/api/news-status', (req, res) => {
-  const version = req.query.version || 'pre-release';
-  const { visible } = req.body;
-  const { newsCarouselPath } = getPathsForVersion(version);
-  try {
-    const dir = path.dirname(newsCarouselPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-    ensureOriginalBackup(newsCarouselPath, `${version}_NewsTilesCarousel.ui`);
-
-    const targetContent = visible ? DEFAULT_NEWS_UI : INVISIBLE_ZERO_NEWS_UI;
-    fs.writeFileSync(newsCarouselPath, targetContent, 'utf8');
-
-    // Guardar personalización del usuario separada en config.json
-    saveUserCustomization(version, { newsVisible: visible });
-
-    // Nota: NO se actualiza lastKnownVersionHashes aquí.
-    // El hash trackea la carpeta del juego (archivos que no modificamos), no nuestras escrituras.
-
-    res.json({ success: true, visible });
   } catch (err) {
     res.json({ success: false, error: err.message });
   }
@@ -1463,7 +1176,6 @@ app.get('/api/hytale-path', (req, res) => {
   const paths = getPathsForVersion(version);
   const jsonExists = !!(paths.jsonPath && fs.existsSync(paths.jsonPath));
   const texturesExists = !!(paths.texturesDir && fs.existsSync(paths.texturesDir));
-  const newsExists = !!(paths.newsCarouselPath && fs.existsSync(paths.newsCarouselPath));
   const homeExists = !!(paths.homePagePath && fs.existsSync(paths.homePagePath));
 
   res.json({
@@ -1480,7 +1192,6 @@ app.get('/api/hytale-path', (req, res) => {
     details: {
       jsonPath: jsonExists ? paths.jsonPath : null,
       texturesDir: texturesExists ? paths.texturesDir : null,
-      newsCarouselPath: newsExists ? paths.newsCarouselPath : null,
       homePagePath: homeExists ? paths.homePagePath : null,
     }
   });
@@ -1549,7 +1260,6 @@ app.post('/api/hytale-path', (req, res) => {
   const verPaths = getPathsForVersion(reqVersion);
   const jsonExists = !!(verPaths.jsonPath && fs.existsSync(verPaths.jsonPath));
   const texturesExists = !!(verPaths.texturesDir && fs.existsSync(verPaths.texturesDir));
-  const newsExists = !!(verPaths.newsCarouselPath && fs.existsSync(verPaths.newsCarouselPath));
   const homeExists = !!(verPaths.homePagePath && fs.existsSync(verPaths.homePagePath));
 
   res.json({
@@ -1560,7 +1270,6 @@ app.post('/api/hytale-path', (req, res) => {
     details: {
       jsonPath: jsonExists ? verPaths.jsonPath : null,
       texturesDir: texturesExists ? verPaths.texturesDir : null,
-      newsCarouselPath: newsExists ? verPaths.newsCarouselPath : null,
       homePagePath: homeExists ? verPaths.homePagePath : null,
     },
     versions: getVersions()
