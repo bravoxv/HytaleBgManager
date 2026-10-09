@@ -129,16 +129,18 @@ app.post('/api/restore-originals', (req, res) => {
 
     for (const ver of versions) {
       const paths = getPathsForVersion(ver);
-      if (!paths || !paths.homePagePath || !paths.newsCarouselPath || !paths.jsonPath) {
+      if (!paths || !paths.homePagePath || !paths.jsonPath) {
         results[ver] = { skipped: true, reason: 'Rutas no disponibles' };
         continue;
       }
 
       const filesToRestore = [
         { id: `${ver}_HomePage.ui`, target: paths.homePagePath },
-        { id: `${ver}_NewsTilesCarousel.ui`, target: paths.newsCarouselPath },
         { id: `${ver}_MainMenuBackgrounds.json`, target: paths.jsonPath }
       ];
+      if (paths.newsCarouselPath) {
+        filesToRestore.push({ id: `${ver}_NewsTilesCarousel.ui`, target: paths.newsCarouselPath });
+      }
 
       const verResult = { restored: [], notFound: [], removedImages: [] };
       for (const { id, target } of filesToRestore) {
@@ -147,8 +149,8 @@ app.post('/api/restore-originals', (req, res) => {
           verResult.restored.push(target);
         } else {
           verResult.notFound.push(id);
-          // Si no había backup pero es NewsTilesCarousel, forzar DEFAULT_NEWS_UI
-          if (id.endsWith('_NewsTilesCarousel.ui')) {
+          // Si no había backup pero es NewsTilesCarousel y el archivo existe, forzar DEFAULT_NEWS_UI
+          if (id.endsWith('_NewsTilesCarousel.ui') && fs.existsSync(target)) {
             try {
               fs.writeFileSync(target, DEFAULT_NEWS_UI, 'utf8');
               verResult.restored.push(target);
@@ -428,11 +430,14 @@ function getBackupsDir() {
 }
 
 function getManagedProfileFiles(version, paths) {
-  return [
+  const list = [
     { id: `${version}_MainMenuBackgrounds.json`, name: 'MainMenuBackgrounds.json', target: paths.jsonPath },
-    { id: `${version}_NewsTilesCarousel.ui`, name: 'NewsTilesCarousel.ui', target: paths.newsCarouselPath },
     { id: `${version}_HomePage.ui`, name: 'HomePage.ui', target: paths.homePagePath }
-  ].map(file => ({ ...file, backup: path.join(getBackupsDir(), `${file.id}.original`) }));
+  ];
+  if (paths.newsCarouselPath && fs.existsSync(paths.newsCarouselPath)) {
+    list.push({ id: `${version}_NewsTilesCarousel.ui`, name: 'NewsTilesCarousel.ui', target: paths.newsCarouselPath });
+  }
+  return list.map(file => ({ ...file, backup: path.join(getBackupsDir(), `${file.id}.original`) }));
 }
 
 // Guarda una copia del archivo original sin modificar si aún no existe backup.
@@ -773,7 +778,9 @@ function checkAndHandleVersionUpdate(version) {
     vHashes[version] = currentHash;
     saveConfig({ lastKnownVersionHashes: vHashes });
     ensureOriginalBackup(paths.jsonPath,         `${version}_MainMenuBackgrounds.json`);
-    ensureOriginalBackup(paths.newsCarouselPath,  `${version}_NewsTilesCarousel.ui`);
+    if (paths.newsCarouselPath && fs.existsSync(paths.newsCarouselPath)) {
+      ensureOriginalBackup(paths.newsCarouselPath,  `${version}_NewsTilesCarousel.ui`);
+    }
     ensureOriginalBackup(paths.homePagePath,      `${version}_HomePage.ui`);
     try {
       if (paths.jsonPath && fs.existsSync(paths.jsonPath)) {
