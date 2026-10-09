@@ -157,7 +157,21 @@ app.post('/api/restore-originals', (req, res) => {
         }
       }
 
-      // Eliminar de BackgroundImages las imágenes añadidas por el usuario
+      // Leer la configuración original de MainMenuBackgrounds.json para conocer las imágenes predeterminadas del juego
+      const originalJsonBackup = path.join(getBackupsDir(), `${ver}_MainMenuBackgrounds.json.original`);
+      const originalBgConfig = fs.existsSync(originalJsonBackup)
+        ? JSON.parse(fs.readFileSync(originalJsonBackup, 'utf8'))
+        : null;
+      const originalImageNames = new Set(originalBgConfig ? getReferencedImageNames(originalBgConfig) : []);
+
+      // Restaurar imágenes originales si alguna faltaba en Textures
+      const restoredOriginalImgs = restoreOriginalProfileImages(ver, originalBgConfig);
+      if (restoredOriginalImgs.length) {
+        verResult.restoredImages = (verResult.restoredImages || []).concat(restoredOriginalImgs);
+      }
+
+      // Eliminar de BackgroundImages SOLO las imágenes añadidas por el usuario,
+      // NUNCA borrar las imágenes originales/predeterminadas del juego (normal ni borrosa).
       if (paths.texturesDir && fs.existsSync(paths.texturesDir)) {
         const userImagesToRemove = new Set();
 
@@ -166,7 +180,9 @@ app.post('/api/restore-originals', (req, res) => {
           try {
             fs.readdirSync(cfg.imagesSourcePath)
               .filter(f => f.toLowerCase().endsWith('.png'))
-              .forEach(f => userImagesToRemove.add(f));
+              .forEach(f => {
+                if (!originalImageNames.has(f)) userImagesToRemove.add(f);
+              });
           } catch (_) {}
         }
 
@@ -176,16 +192,22 @@ app.post('/api/restore-originals', (req, res) => {
           try {
             fs.readdirSync(profileDir)
               .filter(f => f.toLowerCase().endsWith('.png'))
-              .forEach(f => userImagesToRemove.add(f));
+              .forEach(f => {
+                if (!originalImageNames.has(f)) userImagesToRemove.add(f);
+              });
           } catch (_) {}
         }
 
         // 3. Imágenes referenciadas en las personalizaciones del usuario
         if (cfg.userCustomizations && cfg.userCustomizations[ver] && cfg.userCustomizations[ver].bgConfig) {
-          getReferencedImageNames(cfg.userCustomizations[ver].bgConfig).forEach(f => userImagesToRemove.add(f));
+          getReferencedImageNames(cfg.userCustomizations[ver].bgConfig).forEach(f => {
+            if (!originalImageNames.has(f)) userImagesToRemove.add(f);
+          });
         }
 
         for (const imgName of userImagesToRemove) {
+          // Doble verificación: jamás borrar la imagen original por defecto
+          if (originalImageNames.has(imgName)) continue;
           const destFile = path.join(paths.texturesDir, imgName);
           if (fs.existsSync(destFile)) {
             try {
@@ -270,6 +292,14 @@ app.post('/api/save-original-profile', (req, res) => {
   if (failed.length) {
     return res.json({ success: false, error: 'No se pudieron respaldar todos los archivos.', failed: failed.map(file => file.name) });
   }
+
+  // Respaldar también las imágenes predeterminadas que referencia el json original
+  try {
+    if (paths.jsonPath && fs.existsSync(paths.jsonPath)) {
+      const origBgConfig = JSON.parse(fs.readFileSync(paths.jsonPath, 'utf8'));
+      captureOriginalProfileImages(version, origBgConfig);
+    }
+  } catch (_) {}
 
   const cfg = loadConfig();
   const hashes = cfg.lastKnownVersionHashes || {};
@@ -550,6 +580,11 @@ function getCustomProfileImagesDir(version) {
   return path.join(__dirname, 'user-profiles', safeVersion, 'BackgroundImages');
 }
 
+function getOriginalProfileImagesDir(version) {
+  const safeVersion = String(version || 'pre-release').replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(__dirname, 'backups', 'original-images', safeVersion);
+}
+
 function getReferencedImageNames(bgConfig) {
   const names = new Set();
   for (const group of (bgConfig && bgConfig.Groups) || []) {
@@ -598,6 +633,51 @@ function restoreCustomProfileImages(version) {
   for (const fileName of fs.readdirSync(profileDir).filter(file => file.toLowerCase().endsWith('.png'))) {
     fs.copyFileSync(path.join(profileDir, fileName), path.join(texturesDir, fileName));
     restored.push(fileName);
+  }
+  return restored;
+}
+
+// Respalda las imágenes originales/predeterminadas de BackgroundImages referenciadas en el json original
+function captureOriginalProfileImages(version, bgConfig) {
+  const paths = getPathsForVersion(version);
+  if (!paths || !paths.texturesDir || !fs.existsSync(paths.texturesDir)) return { saved: [], missing: [] };
+  const targetDir = getOriginalProfileImagesDir(version);
+  fs.mkdirSync(targetDir, { recursive: true });
+  const saved = [];
+  const missing = [];
+  for (const fileName of getReferencedImageNames(bgConfig)) {
+    const srcFile = path.join(paths.texturesDir, fileName);
+    if (fs.existsSync(srcFile)) {
+      try {
+        fs.copyFileSync(srcFile, path.join(targetDir, fileName));
+        saved.push(fileName);
+      } catch (_) {
+        missing.push(fileName);
+      }
+    } else {
+      missing.push(fileName);
+    }
+  }
+  return { saved, missing };
+}
+
+// Restaura las imágenes originales/predeterminadas a BackgroundImages si alguna fue borrada o reemplazada
+function restoreOriginalProfileImages(version, bgConfig) {
+  const paths = getPathsForVersion(version);
+  if (!paths || !paths.texturesDir) return [];
+  fs.mkdirSync(paths.texturesDir, { recursive: true });
+  const srcDir = getOriginalProfileImagesDir(version);
+  const restored = [];
+  const imageNames = bgConfig ? getReferencedImageNames(bgConfig) : [];
+  for (const fileName of imageNames) {
+    const dest = path.join(paths.texturesDir, fileName);
+    const backupSrc = srcDir && fs.existsSync(path.join(srcDir, fileName)) ? path.join(srcDir, fileName) : null;
+    if (backupSrc && !fs.existsSync(dest)) {
+      try {
+        fs.copyFileSync(backupSrc, dest);
+        restored.push(fileName);
+      } catch (_) {}
+    }
   }
   return restored;
 }
@@ -695,6 +775,12 @@ function checkAndHandleVersionUpdate(version) {
     ensureOriginalBackup(paths.jsonPath,         `${version}_MainMenuBackgrounds.json`);
     ensureOriginalBackup(paths.newsCarouselPath,  `${version}_NewsTilesCarousel.ui`);
     ensureOriginalBackup(paths.homePagePath,      `${version}_HomePage.ui`);
+    try {
+      if (paths.jsonPath && fs.existsSync(paths.jsonPath)) {
+        const origBgConfig = JSON.parse(fs.readFileSync(paths.jsonPath, 'utf8'));
+        captureOriginalProfileImages(version, origBgConfig);
+      }
+    } catch (_) {}
     return { detected: true, updated: false, firstRun: true };
   }
 
