@@ -6,7 +6,7 @@ title Hytale BG Manager Launcher
 echo ========================================================
 echo               Hytale BG Manager Launcher
 echo ========================================================
-echo Carpeta del proyecto: %CD%
+echo Carpeta: %CD%
 echo.
 
 :: 1. Incluir rutas de Node.js por defecto en PATH de la sesion
@@ -35,27 +35,25 @@ if "%NODE_EXISTS%"=="0" (
     )
 )
 
-:: 3. Si no existe Node.js, descargarlo con curl nativo o powershell en una sola linea
+:: 3. Si no existe Node.js, descargarlo con curl nativo o powershell
 if "%NODE_EXISTS%"=="0" (
-    echo [AVISO] Node.js no esta instalado en tu PC.
-    echo Hytale BG Manager requiere Node.js para descargar librerias y ejecutarse.
+    echo [AVISO] Node.js no esta instalado en este equipo.
+    echo Hytale BG Manager requiere Node.js para funcionar.
     echo.
     echo Descargando el instalador oficial de Node.js LTS...
     echo.
 
     set "DOWNLOADED=0"
     
-    :: Metodo A: Usar curl.exe (incluido de forma nativa en Windows 10 y 11)
-    where curl >nul 2>nul
+    where curl.exe >nul 2>nul
     if %ERRORLEVEL% equ 0 (
-        echo Usando curl para descargar...
+        echo [1/2] Descargando instalador con curl...
         curl.exe -# -L -o "node_installer.msi" "https://nodejs.org/dist/v22.12.0/node-v22.12.0-x64.msi"
         if exist "node_installer.msi" set "DOWNLOADED=1"
     )
 
-    :: Metodo B: PowerShell si curl no estuviera disponible
     if "%DOWNLOADED%"=="0" (
-        echo Usando PowerShell para descargar...
+        echo [1/2] Descargando instalador con PowerShell...
         powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://nodejs.org/dist/v22.12.0/node-v22.12.0-x64.msi', 'node_installer.msi')"
         if exist "node_installer.msi" set "DOWNLOADED=1"
     )
@@ -63,17 +61,17 @@ if "%NODE_EXISTS%"=="0" (
     if not exist "node_installer.msi" (
         echo.
         echo [ERROR] No se pudo descargar el instalador automaticamente.
-        echo Abriendo navegador en la pagina oficial de Node.js...
+        echo Abriendo navegador en https://nodejs.org/ para que lo descargues manualmente...
         start https://nodejs.org/
         echo.
-        echo Instala Node.js y luego vuelve a abrir este archivo.
+        echo Instala Node.js y luego vuelve a ejecutar este archivo.
         pause
         exit /b 1
     )
 
     echo.
     echo ========================================================
-    echo Abriendo instalador de Node.js...
+    echo [2/2] Abriendo instalador de Node.js...
     echo Sigue los pasos del asistente hasta completar la instalacion.
     echo ========================================================
     echo.
@@ -84,21 +82,17 @@ if "%NODE_EXISTS%"=="0" (
 
     echo.
     echo ========================================================
-    echo Node.js instalado!
-    echo IMPORTANTE: Cierra esta ventana y vuelve a ejecutar 'start.bat'
-    echo para que Windows actualice las variables del sistema.
+    echo Node.js instalado con exito!
     echo ========================================================
     echo.
-    pause
-    exit /b 0
 )
 
-echo [OK] Node.js detectado:
-node -v
-npm -v
+echo [OK] Verificando herramientas de Node:
+call node -v
+call npm -v
 echo.
 
-:: 4. Verificar e instalar dependencias con npm si faltan
+:: 4. Verificar e instalar dependencias si faltan
 set "NEED_INSTALL=0"
 if not exist "node_modules" set "NEED_INSTALL=1"
 if not exist "node_modules\electron" set "NEED_INSTALL=1"
@@ -107,25 +101,25 @@ if not exist "node_modules\express" set "NEED_INSTALL=1"
 if "%NEED_INSTALL%"=="1" (
     echo ========================================================
     echo Instalando librerias del proyecto (npm install)...
-    echo Esto puede tardar 1 o 2 minutos, por favor espera...
+    echo Esto solo se hace la primera vez. Por favor espera...
     echo ========================================================
     echo.
     call npm install
     if errorlevel 1 (
         echo.
-        echo [ERROR] Fallo al instalar dependencias con npm.
+        echo [ERROR] Hubo un problema instalando las dependencias.
         pause
         exit /b 1
     )
     echo.
-    echo [OK] Dependencias instaladas.
+    echo [OK] Dependencias instaladas correctamente.
     echo.
 )
 
-:: 5. Comprobar ejecutable de Electron
+:: 5. Comprobar binario de Electron
 if not exist "node_modules\electron\dist\electron.exe" (
     echo ========================================================
-    echo Descargando Electron...
+    echo Verificando binarios de Electron...
     echo ========================================================
     call npx electron install
     if not exist "node_modules\electron\dist\electron.exe" (
@@ -133,21 +127,20 @@ if not exist "node_modules\electron\dist\electron.exe" (
     )
 )
 
-:: 6. Iniciar aplicacion
+:: 6. Iniciar la aplicacion (esperar a que la ventana de Electron termine)
 echo ========================================================
 echo Iniciando Hytale BG Manager...
 echo ========================================================
 echo.
 
 if exist "node_modules\electron\dist\electron.exe" (
-    "node_modules\electron\dist\electron.exe" .
+    call "node_modules\electron\dist\electron.exe" .
 ) else (
     call npx electron .
 )
 
 set "APP_EXIT=%ERRORLEVEL%"
-if %APP_EXIT% neq 0 (
-    echo.
-    echo [AVISO] La aplicacion finalizo con codigo: %APP_EXIT%
-    pause
-)
+echo.
+echo La aplicacion ha finalizado (Codigo: %APP_EXIT%).
+echo.
+pause
