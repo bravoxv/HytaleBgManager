@@ -128,6 +128,9 @@ echo Iniciando Hytale BG Manager...
 echo ========================================================
 echo.
 
+:: Cerrar procesos residuales previos que pudieran bloquear puertos o archivos de sesion
+taskkill /F /IM electron.exe >nul 2>&1
+
 if exist "node_modules\electron\dist\electron.exe" (
     "node_modules\electron\dist\electron.exe" .
 ) else (

@@ -1683,9 +1683,44 @@ async function refreshProfileStatus() {
 let isOriginalLocked = false;
 function applyOriginalLockUI(locked) {
     isOriginalLocked = locked;
+    
+    // Banner de copia requerida
+    const banner = document.getElementById('original-backup-required-banner');
+    if (banner) {
+        if (locked) banner.classList.remove('hidden');
+        else banner.classList.add('hidden');
+    }
+
+    // Botón de guardar todas las versiones desde el banner
+    const btnSaveAllBanner = document.getElementById('btn-save-all-originals-banner');
+    if (btnSaveAllBanner && !btnSaveAllBanner._bound) {
+        btnSaveAllBanner._bound = true;
+        btnSaveAllBanner.addEventListener('click', async () => {
+            btnSaveAllBanner.disabled = true;
+            btnSaveAllBanner.textContent = '⏳ Analizando y guardando todas las versiones...';
+            try {
+                const res = await fetch('/api/save-all-original-profiles', { method: 'POST' }).then(r => r.json());
+                if (res && res.success) {
+                    showToast('✅ ¡Copia original guardada para todas las versiones! Controles desbloqueados.');
+                    await refreshProfileStatus();
+                    await loadData();
+                } else {
+                    showToast('❌ Error: ' + (res?.error || 'No se pudieron guardar las copias'), true);
+                }
+            } catch (err) {
+                showToast('❌ Error de conexión: ' + err.message, true);
+            } finally {
+                btnSaveAllBanner.disabled = false;
+                btnSaveAllBanner.textContent = '💾 Guardar Copia Original de Todas las Versiones';
+            }
+        });
+    }
+
     const lockableElements = [
         btnOpenPreview,
         btnSaveAll,
+        document.getElementById('btn-add-bg'),
+        btnRestoreOriginals,
         document.querySelector('label[for="file-upload"]'),
         document.getElementById('btn-images-source-save'),
         document.getElementById('btn-images-source-apply'),
@@ -1702,18 +1737,25 @@ function applyOriginalLockUI(locked) {
         btnApplyAvatar,
         btnResetAvatar,
         btnAddVfx,
-        btnApplyVfx
+        btnApplyVfx,
+        btnSaveCustomProfile,
+        btnApplyCustomProfile,
+        document.getElementById('bg-list')
     ].filter(Boolean);
 
     lockableElements.forEach(el => {
         if (locked) {
             el.classList.add('original-locked');
             if ('disabled' in el && el.tagName !== 'LABEL') {
+                el.disabled = true;
                 el.setAttribute('data-lock-disabled', 'true');
             }
         } else {
             el.classList.remove('original-locked');
-            el.removeAttribute('data-lock-disabled');
+            if (el.getAttribute('data-lock-disabled') === 'true') {
+                el.disabled = false;
+                el.removeAttribute('data-lock-disabled');
+            }
         }
     });
 
@@ -1727,8 +1769,12 @@ function applyOriginalLockUI(locked) {
 function handleOriginalLockedIntercept(e) {
     if (!isOriginalLocked) return false;
     const target = e.target;
-    // Si el clic fue dentro o sobre un elemento bloqueado (pero no dentro del modal de perfiles)
-    if (target.closest('#modal-profiles-config') || target.closest('#btn-open-profiles-modal') || target.closest('#version-select') || target.closest('#lang-select')) {
+    // Permitir interacción con el banner de guardado, modal de perfiles, selector de versión e idioma
+    if (target.closest('#original-backup-required-banner') ||
+        target.closest('#modal-profiles-config') || 
+        target.closest('#btn-open-profiles-modal') || 
+        target.closest('#version-select') || 
+        target.closest('#lang-select')) {
         return false;
     }
     const lockedEl = target.closest('.original-locked');
@@ -1737,12 +1783,7 @@ function handleOriginalLockedIntercept(e) {
         e.stopPropagation();
         e.stopImmediatePropagation();
         const t = translations[currentLang] || translations['es'];
-        showToast(t.warnSaveOriginalFirst || '⚠️ Debes ir a Perfiles y guardar primero la configuración original del juego antes de guardar tus personalizaciones.', true);
-        const modal = document.getElementById('modal-profiles-config');
-        if (modal) {
-            modal.style.display = 'flex';
-            refreshProfileStatus();
-        }
+        showToast(t.warnSaveOriginalFirst || '⚠️ Debes guardar primero la copia de la configuración original del juego antes de editar.', true);
         return true;
     }
     return false;

@@ -1,6 +1,28 @@
 const { app, BrowserWindow, shell, Menu } = require('electron');
 const path = require('path');
+const os = require('os');
 const { createServer, PORT } = require('./server');
+
+// 1. Deshabilitar aceleración GPU para garantizar compatibilidad total en cualquier Windows
+app.disableHardwareAcceleration();
+app.commandLine.appendSwitch('disable-gpu');
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+
+// 2. Control de instancia única: nunca permitir más de un Electron ejecutándose a la vez
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+  process.exit(0);
+}
+
+// 3. Ubicar la caché en TEMP para eliminar para siempre los errores de "Acceso denegado (0x5)"
+try {
+  const sessionDataPath = path.join(os.tmpdir(), 'hytale-bg-manager-data');
+  app.setPath('userData', sessionDataPath);
+} catch (e) {
+  console.error('[Electron] Error al configurar userData path:', e);
+}
 
 let mainWindow = null;
 let serverInstance = null;
@@ -18,14 +40,12 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    // Sin barra de menú — ventana limpia de app nativa
     autoHideMenuBar: true,
   });
 
-  // Eliminar la barra de menú completamente en todas las plataformas
   Menu.setApplicationMenu(null);
 
-  // Atajo F12 para abrir/cerrar DevTools en caso de diagnóstico
+  // Atajo F12 para diagnóstico en vivo
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'F12' && input.type === 'keyDown') {
       mainWindow.webContents.toggleDevTools();
@@ -33,20 +53,23 @@ function createWindow() {
     }
   });
 
-  // Reintento automático si la página no carga a la primera
+  // Reintento automático si el servidor Express todavía estaba iniciando
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error(`[Electron] Error al cargar URL (${errorCode}: ${errorDescription}). Reintentando en 1s...`);
+    console.warn(`[Electron] Reintentando carga de interfaz (${errorCode}: ${errorDescription})...`);
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
       }
-    }, 1200);
+    }, 1000);
   });
 
-  // Cargar la interfaz desde el servidor Express interno
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[Electron] Interfaz cargada y lista.');
+  });
+
+  // Cargar URL del servidor Express
   mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
 
-  // Abrir links externos en el navegador del sistema, no dentro de la app
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
@@ -57,38 +80,40 @@ function createWindow() {
   });
 }
 
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
 app.whenReady().then(() => {
-  // Iniciar servidor Express integrado, y cuando esté listo abrir la ventana
   serverInstance = createServer(PORT, () => {
     createWindow();
   });
 
-  // En macOS, volver a abrir la ventana si se hace clic en el ícono del dock
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
-// Cerrar el servidor Express al cerrar la app
 app.on('window-all-closed', () => {
   const doExit = () => {
-    // En macOS la app sigue en el dock hasta que el usuario la cierra explícitamente
     if (process.platform !== 'darwin') {
       app.quit();
-      // Forzar el cierre del proceso para que la consola que lanzó la app también se cierre
       process.exit(0);
     }
   };
 
   if (serverInstance) {
-    serverInstance.close(() => {
-      console.log('Servidor Express cerrado.');
+    try {
+      serverInstance.close(() => {
+        doExit();
+      });
+    } catch (e) {
       doExit();
-    });
-    // Timeout de seguridad: si el servidor tarda más de 2s en cerrarse, forzar salida
-    setTimeout(() => {
-      doExit();
-    }, 2000);
+    }
+    setTimeout(() => doExit(), 1500);
   } else {
     doExit();
   }

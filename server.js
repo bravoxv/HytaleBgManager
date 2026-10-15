@@ -248,15 +248,19 @@ app.get('/api/profiles/status', (req, res) => {
   }
 
   const originals = cfg.originalProfiles && cfg.originalProfiles[version];
+  const hasExplicitOriginalRecord = Boolean(originals && originals.savedAt);
+  const backupFilesExist = files.length > 0 && files.some(file => fs.existsSync(file.backup));
+  const isOriginalActuallySaved = hasExplicitOriginalRecord && backupFilesExist;
 
   res.json({
     success: true,
     version,
-    canSaveOriginal: files.length > 0 && files.every(file => fs.existsSync(file.target)),
-    originalSaved: files.length > 0 && files.every(file => fs.existsSync(file.backup)),
+    canSaveOriginal: files.length > 0 && files.some(file => fs.existsSync(file.target)),
+    originalSaved: isOriginalActuallySaved,
     originalDetails: originals || null,
-    needsOriginalSnapshot: Boolean(cfg.pendingOriginalProfiles && cfg.pendingOriginalProfiles[version]),
+    needsOriginalSnapshot: Boolean(cfg.pendingOriginalProfiles && cfg.pendingOriginalProfiles[version]) || !isOriginalActuallySaved,
     pendingUpdate: (cfg.pendingOriginalProfiles && cfg.pendingOriginalProfiles[version]) || null,
+    allOriginalsSaved: Boolean(cfg.allOriginalsSaved),
     hasCustomProfile,
     customDetails: hasCustomProfile ? {
       updatedAt: custom.updatedAt,
@@ -266,6 +270,71 @@ app.get('/api/profiles/status', (req, res) => {
       hasAvatarConfig: Boolean(custom.avatarConfig)
     } : null
   });
+});
+
+// POST /api/save-all-original-profiles
+// Analiza todas las versiones detectadas de Hytale y guarda la copia de seguridad de la configuración original
+app.post('/api/save-all-original-profiles', (req, res) => {
+  try {
+    const versions = getVersions();
+    const results = {};
+    const cfg = loadConfig();
+    const hashes = cfg.lastKnownVersionHashes || {};
+    const pending = cfg.pendingOriginalProfiles || {};
+    const originals = cfg.originalProfiles || {};
+
+    for (const ver of versions) {
+      const paths = getPathsForVersion(ver);
+      const files = getManagedProfileFiles(ver, paths);
+      const existing = files.filter(f => fs.existsSync(f.target));
+
+      if (existing.length === 0) {
+        results[ver] = { success: false, reason: 'Archivos no accesibles' };
+        continue;
+      }
+
+      const savedFiles = [];
+      for (const file of existing) {
+        if (forceOriginalBackup(file.target, file.id)) {
+          savedFiles.push(file.name);
+        }
+      }
+
+      try {
+        if (paths.jsonPath && fs.existsSync(paths.jsonPath)) {
+          const origBgConfig = JSON.parse(fs.readFileSync(paths.jsonPath, 'utf8'));
+          captureOriginalProfileImages(ver, origBgConfig);
+        }
+      } catch (_) {}
+
+      const hash = computeGameVersionHash(paths);
+      if (hash) hashes[ver] = hash;
+      delete pending[ver];
+      originals[ver] = {
+        savedAt: new Date().toISOString(),
+        files: savedFiles
+      };
+
+      results[ver] = { success: true, savedFiles };
+    }
+
+    saveConfig({
+      lastKnownVersionHashes: hashes,
+      pendingOriginalProfiles: pending,
+      originalProfiles: originals,
+      allOriginalsSaved: true
+    });
+
+    console.log('[SaveAllOriginals] Copias originales respaldadas para todas las versiones:', Object.keys(results));
+    res.json({
+      success: true,
+      versions: results,
+      message: 'Copia de seguridad original guardada para todas las versiones detectadas.'
+    });
+  } catch (err) {
+    console.error('[SaveAllOriginals] Error:', err);
+    res.json({ success: false, error: err.message });
+  }
 });
 
 app.post('/api/save-original-profile', (req, res) => {
