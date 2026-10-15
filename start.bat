@@ -1,116 +1,149 @@
 @echo off
+setlocal enabledelayedexpansion
 :: Hytale BG Manager — Lanzador Windows
 cd /d "%~dp0"
+title Hytale BG Manager
+
+echo ========================================================
+echo               Hytale BG Manager Launcher
+echo ========================================================
 echo Directorio: %CD%
 echo.
 
-:: Asegurar que las rutas basicas del sistema (System32) y Node.js esten en el PATH
+:: 1. Asegurar rutas habituales en el PATH de la sesion
 set "PATH=%SystemRoot%\System32;%SystemRoot%;%SystemRoot%\System32\Wbem;%SystemRoot%\System32\WindowsPowerShell\v1.0\;%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%LocalAppData%\Programs\node;%AppData%\npm;%PATH%"
 
-:: Comprobar si Node.js / npm esta disponible
-set "NODE_FOUND=0"
-if exist "%ProgramFiles%\nodejs\npm.cmd" set "NODE_FOUND=1"
-if exist "%ProgramFiles(x86)%\nodejs\npm.cmd" set "NODE_FOUND=1"
-if exist "%LocalAppData%\Programs\node\npm.cmd" set "NODE_FOUND=1"
-
-if "%NODE_FOUND%"=="0" (
+:: 2. Comprobar si Node.js y npm estan disponibles
+set "NODE_OK=0"
+where node >nul 2>nul
+if %ERRORLEVEL% equ 0 (
     where npm >nul 2>nul
-    if %ERRORLEVEL% equ 0 set "NODE_FOUND=1"
+    if %ERRORLEVEL% equ 0 (
+        set "NODE_OK=1"
+    )
 )
 
-if "%NODE_FOUND%"=="0" (
-    where node >nul 2>nul
-    if %ERRORLEVEL% equ 0 set "NODE_FOUND=1"
+:: Si no se encuentran en PATH, buscar rutas tipicas fijas
+if "!NODE_OK!"=="0" (
+    if exist "%ProgramFiles%\nodejs\node.exe" (
+        set "PATH=%ProgramFiles%\nodejs;%PATH%"
+        set "NODE_OK=1"
+    ) else if exist "%ProgramFiles(x86)%\nodejs\node.exe" (
+        set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
+        set "NODE_OK=1"
+    ) else if exist "%LocalAppData%\Programs\node\node.exe" (
+        set "PATH=%LocalAppData%\Programs\node;%PATH%"
+        set "NODE_OK=1"
+    )
 )
 
-if "%NODE_FOUND%"=="0" (
+:: Si sigue sin encontrarse, solicitar e instalar Node.js automaticamente
+if "!NODE_OK!"=="0" (
+    echo [!] Node.js no se encuentra instalado en este equipo.
+    echo     Hytale BG Manager lo necesita para descargar librerias y ejecutarse.
     echo.
-    echo ========================================================
-    echo AVISO: Node.js no esta instalado en este equipo.
-    echo Hytale BG Manager lo necesita para poder funcionar.
-    echo ========================================================
-    echo.
-    set "CHOICE_INPUT=S"
-    set /p "CHOICE_INPUT=[S] Si  /  [N] No (por defecto: S): "
-    if /i "%CHOICE_INPUT%"=="N" (
+    echo Deseas descargarlo e instalarlo automaticamente ahora?
+    set "INST_NODE=S"
+    set /p "INST_NODE=[S] Si  /  [N] No (Enter para Si): "
+    if /i "!INST_NODE!"=="N" (
         echo.
-        echo Operacion cancelada por el usuario.
+        echo No se puede continuar sin Node.js.
+        echo Puedes instalarlo tu mismo desde: https://nodejs.org/
         echo.
         pause
         exit /b 1
     )
 
     echo.
-    echo Intentando instalar Node.js automaticamente...
-    
-    :: 1. Probar con winget si esta disponible en Windows 10/11
+    echo ========================================================
+    echo Descargando e instalando Node.js LTS...
+    echo ========================================================
+
     where winget >nul 2>nul
     if %ERRORLEVEL% equ 0 (
-        echo Descargando e instalando con winget, por favor espera...
+        echo Usando Windows Package Manager (winget)...
         winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent
     ) else (
-        :: 2. Descargar instalador oficial MSI via powershell
-        echo Descargando instalador de Node.js...
-        powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://nodejs.org/dist/v22.12.0/node-v22.12.0-x64.msi', 'node_installer.msi')"
+        echo Descargando instalador oficial de Node.js via PowerShell...
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $wc = New-Object System.Net.WebClient; $wc.DownloadFile('https://nodejs.org/dist/v22.12.0/node-v22.12.0-x64.msi', 'node_installer.msi')"
         if exist node_installer.msi (
-            echo Instalando Node.js... Completa el asistente en pantalla.
-            msiexec /i node_installer.msi
+            echo Ejecutando instalador... Sigue los pasos en pantalla.
+            msiexec /i node_installer.msi /passive
             del node_installer.msi >nul 2>&1
         ) else (
-            echo No se pudo descargar el instalador automaticamente.
-            echo Puedes descargarlo manualmente desde: https://nodejs.org/
+            echo No se pudo descargar automaticamente. Abriendo pagina oficial...
+            start https://nodejs.org/
             pause
             exit /b 1
         )
     )
 
-    :: Refrescar variables de entorno de la sesion
-    if exist "%ProgramFiles%\nodejs\npm.cmd" (
-        set "PATH=%ProgramFiles%\nodejs;%PATH%"
-    ) else if exist "%ProgramFiles(x86)%\nodejs\npm.cmd" (
-        set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
-    )
-
-    where npm >nul 2>nul
-    if %ERRORLEVEL% equ 0 (
+    :: Recargar rutas tipicas tras la instalacion
+    set "PATH=%ProgramFiles%\nodejs;%ProgramFiles(x86)%\nodejs;%AppData%\npm;%PATH%"
+    where node >nul 2>nul
+    if %ERRORLEVEL% neq 0 (
         echo.
-        echo Node.js instalado con exito! Continuando con el inicio...
-        echo.
-    ) else (
-        echo.
-        echo Node.js ha sido instalado. Por favor cierra esta ventana
-        echo y vuelve a abrir 'start.bat' para aplicar los cambios del sistema.
+        echo ========================================================
+        echo [OK] Node.js se ha instalado correctamente.
+        echo Por favor, CIERRA esta ventana y vuelve a hacer doble clic
+        echo en 'start.bat' para que Windows reconozca los cambios.
+        echo ========================================================
         echo.
         pause
         exit /b 0
     )
 )
 
-:: Instalar dependencias la primera vez
-if not exist node_modules (
-    echo Instalando dependencias, espera...
-    call npm install
-)
-
-:: Verificar electron
-if not exist "node_modules\electron\dist\electron.exe" (
-    echo ERROR: electron.exe no encontrado en node_modules\electron\dist\
-    echo Intentando reinstalar...
-    call npm install electron --save-dev
-)
-
-echo Lanzando Hytale BG Manager...
+echo [OK] Node.js detectado:
+node -v
+npm -v
 echo.
 
-call npx electron .
-if %ERRORLEVEL% neq 0 (
-    if exist "node_modules\electron\dist\electron.exe" (
-        "node_modules\electron\dist\electron.exe" .
+:: 3. Verificar e instalar dependencias si faltan
+set "NEED_INSTALL=0"
+if not exist "node_modules" set "NEED_INSTALL=1"
+if not exist "node_modules\electron" set "NEED_INSTALL=1"
+if not exist "node_modules\express" set "NEED_INSTALL=1"
+
+if "!NEED_INSTALL!"=="1" (
+    echo ========================================================
+    echo Instalando dependencias necesarias (npm install)...
+    echo Esto puede tardar 1 o 2 minutos en la primera ejecucion.
+    echo ========================================================
+    call npm install
+    if %ERRORLEVEL% neq 0 (
+        echo.
+        echo [ERROR] Hubo un problema al instalar las dependencias con npm.
+        pause
+        exit /b %ERRORLEVEL%
+    )
+    echo.
+)
+
+:: 4. Verificar ejecutable de Electron
+if not exist "node_modules\electron\dist\electron.exe" (
+    echo Reparando binarios de Electron...
+    call npx electron install
+    if not exist "node_modules\electron\dist\electron.exe" (
+        call npm install electron --save-dev
     )
 )
-set EXIT=%ERRORLEVEL%
 
+:: 5. Iniciar la aplicacion
+echo ========================================================
+echo Iniciando Hytale BG Manager...
+echo ========================================================
 echo.
-echo Codigo de salida: %EXIT%
-echo.
-pause
+
+if exist "node_modules\electron\dist\electron.exe" (
+    start "" "node_modules\electron\dist\electron.exe" .
+) else (
+    call npx electron .
+)
+
+set EXIT=%ERRORLEVEL%
+if %EXIT% neq 0 (
+    echo.
+    echo [AVISO] La aplicacion finalizo con codigo de salida: %EXIT%
+    pause
+)
