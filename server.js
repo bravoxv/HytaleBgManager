@@ -1519,6 +1519,9 @@ function downloadRaw(rawUrl) {
       if (r.statusCode === 301 || r.statusCode === 302) {
         return downloadRaw(r.headers.location).then(resolve).catch(reject);
       }
+      if (r.statusCode !== 200) {
+        return reject(new Error(`HTTP ${r.statusCode} al descargar ${rawUrl}`));
+      }
       const chunks = [];
       r.on('data', c => chunks.push(c));
       r.on('end', () => resolve(Buffer.concat(chunks)));
@@ -1532,8 +1535,16 @@ function reloadPkg() {
   catch (e) { return {}; }
 }
 
-// Devuelve el commit local leyendo el package.json del disco (no el valor cacheado al inicio)
-function getLocalCommit() { return reloadPkg().commit || null; }
+// Devuelve el commit local leyendo git o package.json del disco
+function getLocalCommit() {
+  try {
+    const { execSync } = require('child_process');
+    const gitCommit = execSync('git rev-parse HEAD', { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'], timeout: 1500 })
+      .toString().trim();
+    if (gitCommit && gitCommit.length >= 7) return gitCommit;
+  } catch (e) {}
+  return reloadPkg().commit || null;
+}
 function getGithubRepo()  {
   const p = reloadPkg();
   return p.githubRepo || 'bravoxv/HytaleBgManager';
@@ -1590,8 +1601,7 @@ app.get('/api/check-app-update', async (req, res) => {
 });
 
 // POST /api/apply-update
-// Descarga solo los archivos que cambiaron usando GitHub Compare API y los escribe en disco.
-// Al terminar actualiza el campo "commit" en package.json.
+// Descarga de forma atómica los archivos en memoria y sólo si TODOS son válidos los escribe a disco.
 app.post('/api/apply-update', async (req, res) => {
   try {
     const localCommit = getLocalCommit();
@@ -1619,63 +1629,83 @@ app.post('/api/apply-update', async (req, res) => {
     }
 
     const changedFiles = cmpRes.body.files.filter(f => {
-      // Ignorar archivos del usuario y generados
       const top = f.filename.split('/')[0];
       if (UPDATE_SKIP_PATHS.has(top) || UPDATE_SKIP_PATHS.has(f.filename)) return false;
-      // Ignorar archivos eliminados (status: 'removed') — no los borramos automáticamente por seguridad
       if (f.status === 'removed') return false;
       return true;
     });
 
     if (changedFiles.length === 0) {
-      // Solo cambiaron archivos ignorados (config, etc.) — igual actualizamos el commit
       const pkg = reloadPkg();
       pkg.commit = latestCommit;
       fs.writeFileSync(path.join(__dirname, 'package.json'), JSON.stringify(pkg, null, 2), 'utf8');
       return res.json({ success: true, applied: [], skipped: [], newCommit: latestCommit });
     }
 
-    // 3. Descargar y escribir cada archivo cambiado
-    const applied = [];
-    const failed  = [];
-
+    // 3. Descargar TODOS los archivos primero a memoria. Si uno solo falla, abortar sin tocar disco.
+    const fileBuffers = [];
     for (const file of changedFiles) {
+      const rawUrl = file.raw_url;
+      if (!rawUrl) {
+        return res.json({ success: false, error: `Archivo sin URL: ${file.filename}` });
+      }
       try {
-        const rawUrl = file.raw_url;
-        if (!rawUrl) { failed.push({ file: file.filename, error: 'Sin raw_url' }); continue; }
-
-        const content  = await downloadRaw(rawUrl);
-        const destPath = path.join(__dirname, ...file.filename.split('/'));
-        const destDir  = path.dirname(destPath);
-
-        if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
-        fs.writeFileSync(destPath, content);
-        applied.push(file.filename);
-        console.log(`[Update] Actualizado: ${file.filename}`);
-      } catch (e) {
-        failed.push({ file: file.filename, error: e.message });
-        console.error(`[Update] Error en ${file.filename}:`, e.message);
+        const content = await downloadRaw(rawUrl);
+        if (!content || content.length === 0) {
+          return res.json({ success: false, error: `Archivo vacío o corrupto: ${file.filename}` });
+        }
+        fileBuffers.push({ filename: file.filename, content });
+      } catch (dlErr) {
+        console.error(`[Update] Error descargando ${file.filename}:`, dlErr.message);
+        return res.json({ success: false, error: `Error descargando ${file.filename}: ${dlErr.message}` });
       }
     }
 
-    // 4. Actualizar el commit en package.json para que el detector no vuelva a disparar
+    // 4. Escribir a disco todos los archivos descargados
+    const applied = [];
+    for (const item of fileBuffers) {
+      const destPath = path.join(__dirname, ...item.filename.split('/'));
+      const destDir  = path.dirname(destPath);
+      if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+      fs.writeFileSync(destPath, item.content);
+      applied.push(item.filename);
+      console.log(`[Update] Actualizado en disco: ${item.filename}`);
+    }
+
+    // 5. Actualizar el commit en package.json
     const pkg = reloadPkg();
     pkg.commit = latestCommit;
     fs.writeFileSync(path.join(__dirname, 'package.json'), JSON.stringify(pkg, null, 2), 'utf8');
 
-    console.log(`[Update] Completado. Aplicados: ${applied.length}, Fallidos: ${failed.length}`);
+    console.log(`[Update] Actualización completada con éxito. Archivos actualizados: ${applied.length}`);
 
     res.json({
       success: true,
       applied,
-      failed,
       newCommit:  latestCommit,
       newShort:   latestCommit.substring(0, 7),
-      needsRestart: applied.some(f => f === 'server.js' || f === 'main.js')
+      needsRestart: true
     });
 
   } catch (err) {
     console.error('[Update] Error general:', err);
     res.json({ success: false, error: err.message });
   }
+});
+
+// POST /api/restart-app
+// Reinicia la aplicación Electron limpia y ordenadamente
+app.post('/api/restart-app', (req, res) => {
+  res.json({ success: true });
+  setTimeout(() => {
+    try {
+      const { app } = require('electron');
+      if (app) {
+        app.relaunch();
+        app.exit(0);
+        return;
+      }
+    } catch (e) {}
+    process.exit(0);
+  }, 400);
 });

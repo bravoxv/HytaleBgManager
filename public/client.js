@@ -409,7 +409,13 @@ async function checkAppUpdate() {
                         if (btnLabel) btnLabel.textContent = '🔄 Reiniciar ahora';
                         link.style.opacity = '1';
                         link.dataset.applying = 'restart';
-                        link.addEventListener('click', (e) => { e.preventDefault(); location.reload(); }, { once: true });
+                        link.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            try {
+                                await fetch('/api/restart-app', { method: 'POST' });
+                            } catch (err) {}
+                            setTimeout(() => location.reload(), 1000);
+                        }, { once: true });
                     } else {
                         if (desc) desc.textContent = 'No hubo cambios que aplicar.';
                         link.classList.add('hidden');
@@ -423,16 +429,8 @@ async function checkAppUpdate() {
             }, { once: true });
         }
 
-        // Mostrar banda con animación
+        // Mostrar banda con animación (sin botón de cerrar, obligatoria)
         banner.classList.remove('hidden');
-
-        // Botón cerrar
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                banner.style.animation = 'bannerSlideDown 0.25s ease reverse forwards';
-                setTimeout(() => banner.classList.add('hidden'), 250);
-            }, { once: true });
-        }
     } catch (e) {
         console.log('[Update] No se pudo verificar actualizaciones:', e.message);
     }

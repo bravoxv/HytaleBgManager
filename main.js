@@ -25,6 +25,24 @@ function createWindow() {
   // Eliminar la barra de menú completamente en todas las plataformas
   Menu.setApplicationMenu(null);
 
+  // Atajo F12 para abrir/cerrar DevTools en caso de diagnóstico
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+
+  // Reintento automático si la página no carga a la primera
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error(`[Electron] Error al cargar URL (${errorCode}: ${errorDescription}). Reintentando en 1s...`);
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
+      }
+    }, 1200);
+  });
+
   // Cargar la interfaz desde el servidor Express interno
   mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
 
