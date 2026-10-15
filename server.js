@@ -2,12 +2,18 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const { exec, spawn } = require('child_process');
+const { spawn } = require('child_process');
 const crypto = require('crypto');
 const multer = require('multer');
+const os = require('os');
+const https = require('https');
+const http = require('http');
 
 const app = express();
 const PORT = 4785;
+
+// Firma estándar PNG (primeros 8 bytes: 89 50 4E 47 0D 0A 1A 0A)
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 // Resultado del chequeo de versión al arrancar (accesible via /api/startup-status)
 let _startupCheckResult = null;
@@ -74,7 +80,7 @@ function createServer(port, onReady) {
   });
 }
 
-module.exports = { createServer, startupVersionCheck };
+module.exports = { createServer, PORT };
 
 const allowedOrigins = [`http://127.0.0.1:${PORT}`, `http://localhost:${PORT}`];
 app.use(cors({
@@ -103,10 +109,7 @@ app.get(['/', '/linux', '/windows'], (req, res) => {
   }
 });
 
-// Endpoint de estado/ping (Electron gestiona el ciclo de vida de la app)
-app.get('/api/ping', (req, res) => {
-  res.json({ success: true, message: 'pong' });
-});
+// (Eliminado: /api/ping — innecesario en contexto Electron, el servidor siempre está disponible)
 
 // Devuelve el resultado del chequeo de versión que ocurrió al arrancar el servidor.
 // El cliente lo consulta una vez al cargar para saber si hubo actualizaciones detectadas
@@ -372,17 +375,23 @@ app.post('/api/apply-custom-profile', (req, res) => {
   res.json({ success: true, version, restoredImages: result.restoredImages || [] });
 });
 
-const os = require('os');
+// (os ya importado al inicio del archivo)
 
 function getConfigFile() {
   return path.join(__dirname, 'config.json');
 }
 
+// Caché en memoria para evitar leer config.json del disco en cada llamada.
+// Se invalida automáticamente al guardar.
+let _configCache = null;
+
 function loadConfig() {
+  if (_configCache) return _configCache;
   try {
     const cfgPath = getConfigFile();
     if (fs.existsSync(cfgPath)) {
-      return JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+      _configCache = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+      return _configCache;
     }
   } catch (e) {
     console.error('Error al leer config.json:', e);
@@ -396,9 +405,11 @@ function saveConfig(data) {
     const current = loadConfig();
     const merged = { ...current, ...data };
     fs.writeFileSync(cfgPath, JSON.stringify(merged, null, 2), 'utf8');
+    _configCache = merged; // Actualizar caché con el valor guardado
     return true;
   } catch (e) {
     console.error('Error al guardar config.json:', e);
+    _configCache = null; // Invalidar caché en caso de error
     return false;
   }
 }
@@ -690,7 +701,7 @@ function applyCustomizationToGame(version) {
   }
 
 
-  // 3. Re-aplicar Avatar Preview (.ui): leer archivo limpio del juego y aplicar parche
+  // 2. Re-aplicar Avatar Preview (.ui): leer archivo limpio del juego y aplicar parche
   if (custom.avatarConfig && paths.homePagePath && fs.existsSync(paths.homePagePath)) {
     try {
       let content = fs.readFileSync(paths.homePagePath, 'utf8');
@@ -1043,7 +1054,6 @@ app.get('/api/check-version', (req, res) => {
 
 app.get('/api/config', (req, res) => {
   const version = req.query.version || 'pre-release';
-  const { jsonPath } = getPathsForVersion(version);
   try {
     const paths = getPathsForVersion(version);
     const fileExists = fs.existsSync(paths.jsonPath);
@@ -1126,6 +1136,12 @@ app.get('/api/texture-file', (req, res) => {
 
   const { texturesDir } = getPathsForVersion(version);
   const filePath = path.join(texturesDir, cleanName);
+
+  // Protección contra path traversal: verificar que la ruta resuelta sigue dentro del directorio permitido
+  if (!path.resolve(filePath).startsWith(path.resolve(texturesDir))) {
+    return res.status(403).send('Acceso denegado');
+  }
+
   res.setHeader('Cache-Control', 'no-store');
 
   if (fs.existsSync(filePath)) {
@@ -1203,22 +1219,7 @@ app.delete('/api/hytale-path', (req, res) => {
   res.json({ success: true, message: 'Ruta limpiada correctamente' });
 });
 
-// Endpoint de diagnóstico: muestra qué encontró y qué no
-app.get('/api/debug-path', (req, res) => {
-  const targetPath = req.query.path || getHytaleInstallBase();
-  const exists = fs.existsSync(targetPath);
-  let entries = [];
-  if (exists) {
-    try { entries = fs.readdirSync(targetPath).slice(0, 30); } catch(e) {}
-  }
-  const found = exists ? findHytaleFilesRecursively(targetPath) : null;
-  res.json({
-    targetPath, exists,
-    topLevelEntries: entries,
-    searchResult: found,
-    filesDetected: !!(found && found.jsonPath)
-  });
-});
+// (Eliminado: /api/debug-path — endpoint de diagnóstico de desarrollo, no usado por el cliente)
 
 // Guardar nueva ruta de Hytale y buscar archivos
 app.post('/api/hytale-path', (req, res) => {
@@ -1304,7 +1305,6 @@ app.post('/api/images-source-path', (req, res) => {
 
   // Expandir tilde en Linux/macOS
   if (sourcePath.startsWith('~/') || sourcePath === '~') {
-    const os = require('os');
     sourcePath = path.join(os.homedir(), sourcePath.slice(sourcePath === '~' ? 1 : 2));
   }
 
@@ -1356,7 +1356,7 @@ app.post('/api/apply-images-from-source', (req, res) => {
     return res.json({ success: false, error: 'No hay archivos PNG en la carpeta seleccionada' });
   }
 
-  const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  // Reutilizar la constante PNG_MAGIC definida más abajo (misma firma PNG)
   const copied = [], failed = [];
 
   for (const file of files) {
@@ -1367,7 +1367,7 @@ app.post('/api/apply-images-from-source', (req, res) => {
       const header = Buffer.alloc(8);
       fs.readSync(fd, header, 0, 8, 0);
       fs.closeSync(fd);
-      if (!header.equals(PNG_SIG)) {
+      if (!header.equals(PNG_MAGIC)) {
         failed.push({ file, error: 'No es un PNG válido' });
         continue;
       }
@@ -1440,7 +1440,7 @@ const storage = multer.diskStorage({
     if (!fs.existsSync(texturesDir)) fs.mkdirSync(texturesDir, { recursive: true });
     cb(null, texturesDir);
   },
-  filename: (req, file, cb) => cb(null, file.originalname)
+  filename: (req, file, cb) => cb(null, path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_'))
 });
 
 const upload = multer({
@@ -1454,8 +1454,6 @@ const upload = multer({
   }
 });
 
-// Firma estándar PNG (primeros 8 bytes: 89 50 4E 47 0D 0A 1A 0A)
-const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.json({ success: false, error: 'No se recibió archivo' });
@@ -1493,7 +1491,6 @@ const UPDATE_SKIP_PATHS = new Set([
 
 function githubRequest(apiPath) {
   return new Promise((resolve, reject) => {
-    const https = require('https');
     const options = {
       hostname: 'api.github.com',
       path: apiPath,
@@ -1517,9 +1514,7 @@ function githubRequest(apiPath) {
 
 function downloadRaw(rawUrl) {
   return new Promise((resolve, reject) => {
-    const https = require('https');
-    const http  = require('http');
-    const lib   = rawUrl.startsWith('https') ? https : http;
+    const lib = rawUrl.startsWith('https') ? https : http;
     lib.get(rawUrl, { headers: { 'User-Agent': 'HytaleBgManager-UpdateCheck' }, timeout: 15000 }, (r) => {
       if (r.statusCode === 301 || r.statusCode === 302) {
         return downloadRaw(r.headers.location).then(resolve).catch(reject);

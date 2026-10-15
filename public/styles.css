@@ -898,6 +898,7 @@ select:focus {
     border-bottom: 1px solid #1e2c3e;
 }
 
+
 .preview-modal-header h2 {
     font-family: var(--hytale-font-title);
     color: #f1f5f9;
@@ -913,7 +914,7 @@ select:focus {
     display: flex;
     flex: 1;
     overflow: hidden;
-    gap: 16px;
+    gap: 0;
     padding: 16px;
     background: #070a0f;
 }
@@ -929,6 +930,71 @@ select:focus {
     overflow: hidden;
     border: 1px solid #1a2636;
     box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+    margin-right: 8px;
+}
+
+/* ── Resize Handles ─────────────────────────────────────────────────── */
+/* Handle horizontal: entre viewport y sidebar */
+.preview-resize-handle-h {
+    width: 6px;
+    cursor: col-resize;
+    background: transparent;
+    position: relative;
+    flex-shrink: 0;
+    z-index: 10;
+    transition: background 0.2s ease;
+    border-radius: 3px;
+}
+
+.preview-resize-handle-h::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 40px;
+    background: #223043;
+    border-radius: 2px;
+    transition: background 0.2s ease, height 0.2s ease;
+}
+
+.preview-resize-handle-h:hover::after,
+.preview-resize-handle-h.active::after {
+    background: #38bdf8;
+    height: 60px;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
+
+/* Handle vertical: entre particle list e inspector */
+.preview-resize-handle-v {
+    height: 6px;
+    cursor: row-resize;
+    background: transparent;
+    position: relative;
+    flex-shrink: 0;
+    z-index: 10;
+    transition: background 0.2s ease;
+}
+
+.preview-resize-handle-v::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: 4px;
+    width: 40px;
+    background: #223043;
+    border-radius: 2px;
+    transition: background 0.2s ease, width 0.2s ease;
+}
+
+.preview-resize-handle-v:hover::after,
+.preview-resize-handle-v.active::after {
+    background: #f59e0b;
+    width: 60px;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
 }
 
 .preview-canvas-wrapper {
@@ -1019,6 +1085,7 @@ select:focus {
     overflow-y: auto;
     overflow-x: hidden;
     height: 100%;
+    margin-left: 8px;
 }
 
 .preview-sidebar-header {

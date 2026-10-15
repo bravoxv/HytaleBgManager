@@ -440,7 +440,6 @@ async function checkAppUpdate() {
 
 
 async function init() {
-    fetch('/api/ping').catch(() => {});
     document.addEventListener('click', handleOriginalLockedIntercept, true);
     document.addEventListener('mousedown', handleOriginalLockedIntercept, true);
     await loadVersions();
@@ -1123,10 +1122,96 @@ function addVfxEffect() {
     renderVfxList(bg.Vfx);
 }
 
+// Paneles redimensionables: permite al usuario ajustar el ancho de la sidebar
+// y la altura de la lista de partículas arrastrando los dividers.
+function initResizableHandles() {
+    // ── Handle horizontal: ancho de la sidebar ──────────────────────────
+    const hHandle = document.getElementById('preview-resize-h');
+    const sidebar = previewModal.querySelector('.preview-sidebar');
+    const body    = previewModal.querySelector('.preview-modal-body');
+
+    if (hHandle && sidebar && body) {
+        let isDraggingH = false;
+
+        hHandle.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            isDraggingH = true;
+            hHandle.classList.add('active');
+            hHandle.setPointerCapture(e.pointerId);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        hHandle.addEventListener('pointermove', e => {
+            if (!isDraggingH) return;
+            const bodyRect = body.getBoundingClientRect();
+            // Distancia desde el borde derecho del body hasta el cursor
+            const newWidth = bodyRect.right - e.clientX - 3; // 3px = mitad del handle
+            const clamped = Math.max(220, Math.min(600, newWidth));
+            sidebar.style.width = `${clamped}px`;
+            sidebar.style.flexShrink = '0';
+            sidebar.style.flexGrow = '0';
+            renderPreviewScene();
+        });
+
+        const stopH = () => {
+            if (isDraggingH) {
+                isDraggingH = false;
+                hHandle.classList.remove('active');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        };
+        hHandle.addEventListener('pointerup', stopH);
+        hHandle.addEventListener('pointercancel', stopH);
+    }
+
+    // ── Handle vertical: altura de la lista de partículas ───────────────
+    const vHandle     = document.getElementById('preview-resize-v');
+    const particleList = document.getElementById('preview-particle-list');
+
+    if (vHandle && particleList) {
+        let isDraggingV = false;
+
+        vHandle.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            isDraggingV = true;
+            vHandle.classList.add('active');
+            vHandle.setPointerCapture(e.pointerId);
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        vHandle.addEventListener('pointermove', e => {
+            if (!isDraggingV) return;
+            const listRect = particleList.getBoundingClientRect();
+            const newHeight = e.clientY - listRect.top;
+            const clamped = Math.max(60, Math.min(500, newHeight));
+            particleList.style.maxHeight = `${clamped}px`;
+            particleList.style.height = `${clamped}px`;
+        });
+
+        const stopV = () => {
+            if (isDraggingV) {
+                isDraggingV = false;
+                vHandle.classList.remove('active');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        };
+        vHandle.addEventListener('pointerup', stopV);
+        vHandle.addEventListener('pointercancel', stopV);
+    }
+}
+
 function initPreviewModal() {
     const closeButton = document.getElementById('btn-close-preview');
     const previewResizeObserver = new ResizeObserver(renderPreviewScene);
     previewResizeObserver.observe(previewCanvas);
+
+    // Inicializar dividers arrastrables para redimensionar paneles
+    initResizableHandles();
+
     const openModal = () => {
         previewModal.style.display = 'flex';
         renderPreviewScene();
@@ -1182,26 +1267,44 @@ function renderPreviewScene() {
         ? `/api/texture-file?version=${encodeURIComponent(currentVersion)}&file=${encodeURIComponent(imagePath)}`
         : '';
 
-    if (imageUrl && previewImage.complete && !previewImage.naturalWidth) {
-        previewPlaceholder.textContent = t.previewImageUnavailable;
-    } else if (!imageUrl) {
-        previewPlaceholder.textContent = t.previewNoImage;
-    } else if (!previewImage.complete) {
-        previewPlaceholder.textContent = t.previewLoading;
-    }
-
+    // Gestión del placeholder y la imagen de fondo
     if (previewImage.dataset.src !== imageUrl) {
+        // Nueva URL: actualizar src y callbacks
         previewImage.dataset.src = imageUrl;
+
         previewImage.onload = () => {
             previewPlaceholder.classList.add('hidden');
+            previewImage.classList.remove('hidden');
             renderPreviewScene();
         };
         previewImage.onerror = () => {
             previewPlaceholder.textContent = (translations[currentLang] || translations.es).previewImageUnavailable;
             previewPlaceholder.classList.remove('hidden');
+            previewImage.classList.add('hidden');
         };
-        if (imageUrl) previewImage.src = imageUrl;
-        else previewImage.removeAttribute('src');
+
+        if (imageUrl) {
+            previewImage.src = imageUrl;
+            previewPlaceholder.textContent = t.previewLoading;
+            previewPlaceholder.classList.remove('hidden');
+        } else {
+            previewImage.removeAttribute('src');
+            previewImage.classList.add('hidden');
+            previewPlaceholder.textContent = t.previewNoImage;
+            previewPlaceholder.classList.remove('hidden');
+        }
+    } else {
+        // Misma URL — verificar si ya está cargada y ocultar placeholder
+        if (imageUrl && previewImage.complete && previewImage.naturalWidth > 0) {
+            previewPlaceholder.classList.add('hidden');
+            previewImage.classList.remove('hidden');
+        } else if (imageUrl && previewImage.complete && !previewImage.naturalWidth) {
+            previewPlaceholder.textContent = t.previewImageUnavailable;
+            previewPlaceholder.classList.remove('hidden');
+        } else if (!imageUrl) {
+            previewPlaceholder.textContent = t.previewNoImage;
+            previewPlaceholder.classList.remove('hidden');
+        }
     }
 
     const particles = bg && Array.isArray(bg.Vfx) ? bg.Vfx : [];
@@ -1239,8 +1342,12 @@ function renderPreviewScene() {
         const marker = document.createElement('button');
         marker.type = 'button';
         marker.className = `particle-marker-box${index === selectedPreviewParticle ? ' selected' : ''}`;
-        marker.style.left = `${imageLeft + Math.max(0, Math.min(1, x)) * imageWidth}px`;
-        marker.style.top = `${imageTop + Math.max(0, Math.min(1, y)) * imageHeight}px`;
+        // NOTA: el CSS aplica transform: translate(-50%, -50%) para centrar el marker
+        // sobre el punto exacto. Las coordenadas left/top apuntan al centro del efecto.
+        const markerCenterX = imageLeft + Math.max(0, Math.min(1, x)) * imageWidth;
+        const markerCenterY = imageTop + Math.max(0, Math.min(1, y)) * imageHeight;
+        marker.style.left = `${markerCenterX}px`;
+        marker.style.top  = `${markerCenterY}px`;
         marker.style.width = `${imageWidth * width / 100}px`;
         marker.style.aspectRatio = '1.4 / 1';
         marker.setAttribute('aria-label', particle.SystemId || `Particle ${index + 1}`);
@@ -1251,18 +1358,55 @@ function renderPreviewScene() {
 
         // Arrastre directo de la partícula en el canvas
         let isDraggingMarker = false;
+        let didDrag = false;
+
         marker.addEventListener('pointerdown', e => {
             e.stopPropagation();
+            if (e.button !== 0) return; // Solo click izquierdo
+            
             selectedPreviewParticle = index;
             isDraggingMarker = true;
-            marker.setPointerCapture(e.pointerId);
-            renderPreviewScene();
+            didDrag = false;
+
+            // Actualizar estilo visual 'selected' en los marcadores existentes sin destruir el DOM
+            previewCanvas.querySelectorAll('.particle-marker-box').forEach((m, idx) => {
+                if (idx === index) m.classList.add('selected');
+                else m.classList.remove('selected');
+            });
+            previewParticleList.querySelectorAll('.preview-particle-item').forEach((item, idx) => {
+                if (idx === index) item.classList.add('selected');
+                else item.classList.remove('selected');
+            });
+
+            // Actualizar inspector
+            const selected = particles[index];
+            if (selected) {
+                previewInspector.querySelectorAll('[data-field]').forEach(inp => {
+                    if (document.activeElement !== inp) {
+                        inp.value = selected[inp.dataset.field] ?? (inp.dataset.field === 'Scale' ? 1 : 0);
+                    }
+                });
+                ['X', 'Y', 'Z', 'Scale'].forEach(field => {
+                    const badge = document.getElementById(`preview-${field.toLowerCase()}-val`);
+                    if (badge && selected[field] !== undefined) {
+                        badge.textContent = Number(selected[field]).toFixed(field === 'X' || field === 'Y' ? 3 : 1);
+                    }
+                });
+            }
+
+            try {
+                marker.setPointerCapture(e.pointerId);
+            } catch (_) {}
         });
 
         marker.addEventListener('pointermove', e => {
             if (!isDraggingMarker) return;
             e.stopPropagation();
+            didDrag = true;
+
             const canvasRect = previewCanvas.getBoundingClientRect();
+            if (!imageWidth || !imageHeight) return;
+
             const relX = (e.clientX - canvasRect.left - imageLeft) / imageWidth;
             const relY = (e.clientY - canvasRect.top - imageTop) / imageHeight;
             const clampedX = Math.round(Math.max(0, Math.min(1, relX)) * 1000) / 1000;
@@ -1273,34 +1417,48 @@ function renderPreviewScene() {
 
             // Actualizar inputs del inspector
             const xRange = document.getElementById('preview-x-range');
-            const xNum = document.getElementById('preview-x');
+            const xNum   = document.getElementById('preview-x');
             const yRange = document.getElementById('preview-y-range');
-            const yNum = document.getElementById('preview-y');
+            const yNum   = document.getElementById('preview-y');
             const xBadge = document.getElementById('preview-x-val');
             const yBadge = document.getElementById('preview-y-val');
             if (xRange) xRange.value = clampedX;
-            if (xNum) xNum.value = clampedX;
+            if (xNum)   xNum.value   = clampedX;
             if (yRange) yRange.value = clampedY;
-            if (yNum) yNum.value = clampedY;
+            if (yNum)   yNum.value   = clampedY;
             if (xBadge) xBadge.textContent = clampedX.toFixed(3);
             if (yBadge) yBadge.textContent = clampedY.toFixed(3);
 
-            // Posición directa del marker
-            marker.style.left = `${imageLeft + clampedX * imageWidth}px`;
-            marker.style.top = `${imageTop + clampedY * imageHeight}px`;
+            // Mover marker directamente sin re-render completo (más suave)
+            const newCx = imageLeft + clampedX * imageWidth;
+            const newCy = imageTop  + clampedY * imageHeight;
+            marker.style.left = `${newCx}px`;
+            marker.style.top  = `${newCy}px`;
 
             // Sincronizar inputs en la lista principal
             const cardX = vfxListEl.querySelectorAll('.vfx-card')[index]?.querySelector('[data-field="X"]');
             const cardY = vfxListEl.querySelectorAll('.vfx-card')[index]?.querySelector('[data-field="Y"]');
             if (cardX) cardX.value = clampedX;
             if (cardY) cardY.value = clampedY;
+
+            // Actualizar también el detalle de la lista del inspector
+            const listItem = previewParticleList.children[index];
+            if (listItem) {
+                const detail = listItem.querySelector('.preview-particle-details');
+                if (detail) {
+                    const z = Number.isFinite(Number(particle.Z)) ? Number(particle.Z) : 10;
+                    detail.innerHTML = `<span><strong>X:</strong> ${clampedX.toFixed(3)}</span><span><strong>Y:</strong> ${clampedY.toFixed(3)}</span><span><strong>Z:</strong> ${z.toFixed(1)}</span><span><strong>Esc:</strong> ${Number(particle.Scale ?? 1).toFixed(1)}</span>`;
+                }
+            }
         });
 
         const stopDragging = e => {
             if (isDraggingMarker) {
                 isDraggingMarker = false;
                 try { marker.releasePointerCapture(e.pointerId); } catch (_) {}
-                renderPreviewScene();
+                if (didDrag) {
+                    renderPreviewScene();
+                }
             }
         };
         marker.addEventListener('pointerup', stopDragging);
@@ -1308,6 +1466,7 @@ function renderPreviewScene() {
 
         marker.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (didDrag) return;
             selectedPreviewParticle = index;
             renderPreviewScene();
         });
@@ -1777,6 +1936,3 @@ async function reloadAllData() {
 
 checkLinuxHytaleStatus();
 init();
-
-
-

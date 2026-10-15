@@ -1,8 +1,7 @@
 const { app, BrowserWindow, shell, Menu } = require('electron');
 const path = require('path');
-const { createServer } = require('./server');
+const { createServer, PORT } = require('./server');
 
-const PORT = 4785;
 let mainWindow = null;
 let serverInstance = null;
 
@@ -54,11 +53,25 @@ app.whenReady().then(() => {
 
 // Cerrar el servidor Express al cerrar la app
 app.on('window-all-closed', () => {
+  const doExit = () => {
+    // En macOS la app sigue en el dock hasta que el usuario la cierra explícitamente
+    if (process.platform !== 'darwin') {
+      app.quit();
+      // Forzar el cierre del proceso para que la consola que lanzó la app también se cierre
+      process.exit(0);
+    }
+  };
+
   if (serverInstance) {
     serverInstance.close(() => {
       console.log('Servidor Express cerrado.');
+      doExit();
     });
+    // Timeout de seguridad: si el servidor tarda más de 2s en cerrarse, forzar salida
+    setTimeout(() => {
+      doExit();
+    }, 2000);
+  } else {
+    doExit();
   }
-  // En macOS la app sigue en el dock hasta que el usuario la cierra explícitamente
-  if (process.platform !== 'darwin') app.quit();
 });
